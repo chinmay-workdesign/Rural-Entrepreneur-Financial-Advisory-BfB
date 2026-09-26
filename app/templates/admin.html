@@ -1009,7 +1009,7 @@
                   </tr>
                   <tr>
                     <td>Projected DSCR</td>
-                    <td style="color: ${p.projected_dscr >= 1.5 ? 'var(--success)' : 'var(--warning)'};">${p.projected_dscr || '1.75'}</td>
+                    <td style="color: ${p.projected_dscr == null ? 'var(--warning)' : (p.projected_dscr >= 1.5 ? 'var(--success)' : 'var(--warning)')};">${p.projected_dscr == null ? 'Not available (no official benchmark)' : p.projected_dscr}</td>
                   </tr>
                 </table>
               </div>

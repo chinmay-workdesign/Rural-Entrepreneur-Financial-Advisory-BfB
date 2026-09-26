@@ -242,8 +242,18 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
     loan = float(proposal.get("sanctioned_loan", cost * 0.90))
     margin = float(proposal.get("beneficiary_margin", cost * 0.10))
     emi = float(proposal.get("monthly_emi", 3583.0))
-    dscr = float(proposal.get("projected_dscr", 1.65))
+    raw_dscr = proposal.get("projected_dscr")
+    dscr = float(raw_dscr) if raw_dscr is not None else None
     scheme = proposal.get("scheme_tier", "MICRO_FINANCE")
+
+    # Official benchmark lookup (drives provenance rows and whether DSCR projections are shown)
+    from app.finance.repository import benchmark_repository
+    from app.finance.deviation import analyze_benchmark_deviation
+
+    bench = benchmark_repository.get_benchmark(trade_name, district=district_name)
+    has_official_benchmark = bench.get("status") != "DATA_NOT_AVAILABLE"
+    dev_analysis = analyze_benchmark_deviation(cost, trade_name, district=district_name)
+    dscr_text = f"{dscr:.2f}" if dscr is not None else "Not available"
 
     story.append(Paragraph(f"2. Itemized Machinery, Capital Assets & Working Capital Breakdown ({trade_name})", heading2_style))
     eq_items = _get_trade_equipment_items(trade_name, cost)
@@ -303,7 +313,7 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
     tenure_str = "36 Months (3 Moratorium + 33 EMI)" if scheme == "MICRO_FINANCE" else "84 Months (6 Moratorium + 78 EMI)"
     debt_data = [
         [Paragraph("<b>Interest Rate:</b>", cell_style), Paragraph(rate_str, cell_style), Paragraph("<b>Tenure & Moratorium:</b>", cell_style), Paragraph(tenure_str, cell_style)],
-        [Paragraph("<b>Monthly Installment (EMI):</b>", bold_cell_style), Paragraph(f"<b>₹{emi:,.2f}</b>", bold_cell_style), Paragraph("<b>Projected Base DSCR:</b>", bold_cell_style), Paragraph(f"<b>{dscr:.2f} (Bankable &ge; 1.25)</b>", bold_cell_style)],
+        [Paragraph("<b>Monthly Installment (EMI):</b>", bold_cell_style), Paragraph(f"<b>₹{emi:,.2f}</b>", bold_cell_style), Paragraph("<b>Projected Base DSCR:</b>", bold_cell_style), Paragraph(f"<b>{dscr_text} (Bankable &ge; 1.25)</b>" if dscr is not None else "<b>Not available</b> (no official benchmark)", bold_cell_style)],
     ]
     d_table = Table(debt_data, colWidths=[130, 140, 130, 135])
     d_table.setStyle(TableStyle([
@@ -324,7 +334,15 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
 
     # 5. 5-Year Cash Flow Projection Table
     story.append(Paragraph("5. 5-Year Financial Cash Flow & DSCR Viability Projections", heading2_style))
-    cf_rows = _get_5year_cashflows(cost, emi, scheme)
+    if not has_official_benchmark:
+        story.append(Paragraph(
+            "<b>Not available.</b> No official government / NABARD cost benchmark exists for this trade, "
+            "so turnover, operating cost and DSCR projections are not shown. The loan terms above are "
+            "derived only from the applicant's stated project cost; costs must be verified by the lending bank or DIC.",
+            cell_style
+        ))
+        story.append(Spacer(1, 6))
+    cf_rows = _get_5year_cashflows(cost, emi, scheme) if has_official_benchmark else []
     cf_table_data = [
         [
             Paragraph("<b>Year & Capacity</b>", white_header_style),
@@ -353,8 +371,9 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
         ('TOPPADDING', (0, 0), (-1, -1), 3),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
-    story.append(cf_table)
-    story.append(Spacer(1, 6))
+    if cf_rows:
+        story.append(cf_table)
+        story.append(Spacer(1, 6))
 
     # 6. Multi-Scheme Concurrence
     story.append(Paragraph("6. Multi-Scheme Government Lending & Subsidy Alternatives", heading2_style))
@@ -393,12 +412,6 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
     story.append(Spacer(1, 6))
 
     # 7. Source & Data Provenance (Statutory Benchmarks & Derived Calculations)
-    from app.finance.repository import benchmark_repository
-    from app.finance.deviation import analyze_benchmark_deviation
-
-    bench = benchmark_repository.get_benchmark(trade_name, district=district_name)
-    dev_analysis = analyze_benchmark_deviation(cost, trade_name, district=district_name)
-
     story.append(Paragraph("7. Source & Data Provenance (Statutory Benchmarks & Derived Calculations)", heading2_style))
 
     # Provenance Table
@@ -471,11 +484,11 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
     # Row 5: DSCR Viability
     prov_rows.append([
         Paragraph("Base DSCR Coverage", cell_style),
-        Paragraph(f"{dscr:.2f}", bold_cell_style),
-        Paragraph("Deterministic Operating Cash Flows", cell_style),
+        Paragraph(dscr_text, bold_cell_style),
+        Paragraph("Deterministic Operating Cash Flows" if dscr is not None else "No official benchmark for this trade", cell_style),
         Paragraph("—", cell_style),
-        Paragraph("Current", cell_style),
-        Paragraph("Derived Math", cell_style),
+        Paragraph("Current" if dscr is not None else "—", cell_style),
+        Paragraph("Derived Math" if dscr is not None else "DATA_NOT_AVAILABLE", cell_style),
     ])
 
     # Row 6: PMEGP Subsidy Norm

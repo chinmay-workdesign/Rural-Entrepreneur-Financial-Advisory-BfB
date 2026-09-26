@@ -175,7 +175,7 @@ def list_proposals(
             "sanctioned_loan": float(p.sanctioned_loan),
             "beneficiary_margin": float(p.beneficiary_margin),
             "monthly_emi": float(p.monthly_emi),
-            "projected_dscr": float(p.projected_dscr),
+            "projected_dscr": float(p.projected_dscr) if p.projected_dscr is not None else None,
             "status": p.status,
             "dpr_pdf_url": pdf_url,
             "created_at": p.created_at.isoformat() if p.created_at else None,

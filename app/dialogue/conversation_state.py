@@ -30,6 +30,60 @@ GREETING_MSG_TE = "నమస్కారం! గ్రామీణ సూక్�
 GREETING_MSG_MR = "नमस्कार! ग्रामीण सूक्ष्म-उद्योग सल्ला केंद्रात आपले स्वागत आहे. आपण कोणता व्यवसाय (उदा. किराणा दुकान, दुग्ध व्यवसाय/गाय, शिलाई काम, कुक्कुटपालन) कोणत्या जिल्ह्यात आणि किती भांडवलासह सुरू करू इच्छिता?"
 GREETING_MSG_EN = "Namaste! Welcome to the Rural Micro-Enterprise AI Advisory. Which business trade (e.g. Kirana stall, Dairy cow, Tailoring) do you want to start, in which district, and what is your required project cost?"
 
+# Appended deterministically (never via LLM) when a trade has no official benchmark.
+NO_BENCHMARK_NOTICE = {
+    "english": (
+        "⚠️ *Note*: There is no official government / NABARD cost benchmark for this business yet. "
+        "The loan and EMI above are calculated from the budget you gave. A DSCR (repayment capacity) "
+        "figure is not shown because there is no verified data to base it on. Please get your costs "
+        "checked at your bank or DIC office."
+    ),
+    "hindi": (
+        "⚠️ *ध्यान दें*: इस व्यवसाय के लिए अभी कोई आधिकारिक सरकारी / NABARD लागत मानक उपलब्ध नहीं है। "
+        "ऊपर दिया गया ऋण और EMI आपके बताए गए बजट के आधार पर गणना किया गया है। सत्यापित आंकड़े न होने के "
+        "कारण DSCR (ऋण चुकाने की क्षमता) नहीं दिखाया गया है। कृपया अपनी लागत बैंक या DIC कार्यालय से जांच करवाएं।"
+    ),
+    "kannada": (
+        "⚠️ *ಗಮನಿಸಿ*: ಈ ವ್ಯವಹಾರಕ್ಕೆ ಇನ್ನೂ ಯಾವುದೇ ಅಧಿಕೃತ ಸರ್ಕಾರಿ / NABARD ವೆಚ್ಚದ ಮಾನದಂಡ ಲಭ್ಯವಿಲ್ಲ. "
+        "ಮೇಲಿನ ಸಾಲ ಮತ್ತು EMI ಅನ್ನು ನೀವು ನೀಡಿದ ಬಜೆಟ್ ಆಧಾರದ ಮೇಲೆ ಲೆಕ್ಕ ಹಾಕಲಾಗಿದೆ. ಪರಿಶೀಲಿತ ಮಾಹಿತಿ ಇಲ್ಲದ "
+        "ಕಾರಣ DSCR (ಸಾಲ ಮರುಪಾವತಿ ಸಾಮರ್ಥ್ಯ) ತೋರಿಸಲಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ವೆಚ್ಚವನ್ನು ಬ್ಯಾಂಕ್ ಅಥವಾ DIC ಕಚೇರಿಯಲ್ಲಿ ಪರಿಶೀಲಿಸಿಕೊಳ್ಳಿ."
+    ),
+    "telugu": (
+        "⚠️ *గమనిక*: ఈ వ్యాపారానికి ఇంకా అధికారిక ప్రభుత్వ / NABARD వ్యయ ప్రమాణం అందుబాటులో లేదు. "
+        "పైన ఉన్న రుణం మరియు EMI మీరు చెప్పిన బడ్జెట్ ఆధారంగా లెక్కించబడ్డాయి. ధృవీకరించిన సమాచారం లేనందున "
+        "DSCR (రుణ చెల్లింపు సామర్థ్యం) చూపబడలేదు. దయచేసి మీ ఖర్చులను బ్యాంక్ లేదా DIC కార్యాలయంలో తనిఖీ చేయించుకోండి."
+    ),
+    "marathi": (
+        "⚠️ *सूचना*: या व्यवसायासाठी अद्याप कोणताही अधिकृत सरकारी / NABARD खर्च मानक उपलब्ध नाही. "
+        "वरील कर्ज आणि EMI तुम्ही सांगितलेल्या बजेटवरून मोजले आहेत. सत्यापित माहिती नसल्यामुळे DSCR "
+        "(कर्ज फेडण्याची क्षमता) दाखवलेला नाही. कृपया तुमचा खर्च बँक किंवा DIC कार्यालयाकडून तपासून घ्या."
+    ),
+}
+
+NO_BENCHMARK_LLM_CONTEXT = (
+    "No official government / NABARD cost benchmark exists for this trade. "
+    "Do not cite, estimate or invent any benchmark, unit cost or DSCR figure."
+)
+
+
+def _resolve_trade_benchmark(trade: str, district: str, cashflows: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Look up the trade benchmark and apply it to the cashflows.
+    Without an official benchmark the DSCR is left out (None) rather than defaulted.
+    """
+    benchmark = get_trade_benchmark(trade, district)
+    available = benchmark.get("status") != "DATA_NOT_AVAILABLE"
+    if available:
+        if benchmark.get("dscr"):
+            cashflows["dscr"] = float(benchmark["dscr"])
+        summary = benchmark.get("summary", f"Grounded in standard rural lending norms in {district}.")
+    else:
+        cashflows["dscr"] = None
+        cashflows["is_bankable"] = None
+        summary = NO_BENCHMARK_LLM_CONTEXT
+    return {"available": available, "summary": summary}
+
+
 LANGUAGE_PROMPT_MSG = (
     "🙏 *Welcome to Rural Micro-Enterprise AI Advisory* / *ಗ್ರಾಮೀಣ ಕಿರು-ಉದ್ಯಮ ಸಲಹಾ ಕೇಂದ್ರಕ್ಕೆ ಸ್ವಾಗತ*\n\n"
     "ದಯವಿಟ್ಟು ನೀವು ಮುಂದುವರಿಯಲು ಬಯಸುವ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ / Please select the language you want to proceed in:\n\n"
@@ -449,7 +503,38 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
 
     # Check for DPR generation trigger
     if "GENERATE DPR" in text_clean.upper() or "DPR" in text_clean.upper():
-        # First send the 2-minute waiting notification requested by the user
+        # Resolve DPR inputs from the conversation or the latest saved proposal; never assume them
+        if not context.get("financial_structure"):
+            trade = context.get("trade")
+            district = context.get("district") or beneficiary.district
+            state = context.get("state") or beneficiary.state or "Karnataka"
+            project_cost = context.get("project_cost")
+
+            if not project_cost or not trade:
+                from app.db.models import EnterpriseProposal
+                latest_prop = db.query(EnterpriseProposal).filter(
+                    EnterpriseProposal.beneficiary_id == beneficiary.id
+                ).order_by(EnterpriseProposal.created_at.desc()).first()
+                if latest_prop:
+                    project_cost = project_cost or (float(latest_prop.project_cost) if latest_prop.project_cost else None)
+                    trade = trade or latest_prop.business_trade
+
+            missing = [
+                name for name, value in (("trade", trade), ("district", district), ("project_cost", project_cost))
+                if not value
+            ]
+            if missing:
+                context.update({k: v for k, v in (("trade", trade), ("district", district), ("project_cost", project_cost)) if v})
+                beneficiary.conversation_state = "COLLECTING"
+                beneficiary.conversation_context = context
+                db.commit()
+                clarification_msg = _generate_clarification_question(missing, trade, district, lang)
+                send_channel_text(beneficiary, clarification_msg)
+                if from_voice:
+                    _send_voice_audio_reply(beneficiary, clarification_msg, lang)
+                return
+
+        # Send the 2-minute waiting notification requested by the user
         if lang == "kannada":
             wait_msg = "⏳ ನಿಮ್ಮ ಬ್ಯಾಂಕ್ ಯೋಜನಾ ವರದಿಯನ್ನು (DPR PDF) ಸಿದ್ಧಪಡಿಸಲಾಗುತ್ತಿದೆ. ದಯವಿಟ್ಟು 2 ನಿಮಿಷ ಕಾಯಿರಿ, ಪೂರ್ಣ ವರದಿಯು ಇಲ್ಲಿಯೇ ನೇರವಾಗಿ ತಲುಪಲಿದೆ..."
         elif lang == "hindi":
@@ -462,32 +547,14 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
             wait_msg = "⏳ Generating your bank-ready Detailed Project Report (DPR PDF). Please wait for 2 minutes while we compile your financial statements and cash flow projections..."
         send_channel_text(beneficiary, wait_msg)
 
-        # Auto-resolve / ensure financial structure exists so DPR is NEVER refused
+        # Build the financial structure from the resolved (user-supplied) inputs
         if not context.get("financial_structure"):
-            trade = context.get("trade") or "Rural Enterprise"
-            district = context.get("district") or beneficiary.district or "Belagavi"
-            state = context.get("state") or beneficiary.state or "Karnataka"
-            project_cost = context.get("project_cost")
-
-            if not project_cost:
-                from app.db.models import EnterpriseProposal
-                latest_prop = db.query(EnterpriseProposal).filter(
-                    EnterpriseProposal.beneficiary_id == beneficiary.id
-                ).order_by(EnterpriseProposal.created_at.desc()).first()
-                if latest_prop and latest_prop.project_cost:
-                    project_cost = float(latest_prop.project_cost)
-                else:
-                    project_cost = 100000.0
-
             fin_result = calculate_financial_structure(project_cost)
             cashflows = project_financial_cashflows(project_cost, fin_result["emi"])
-            benchmark = get_trade_benchmark(trade, district)
-            dscr_bench = float(benchmark.get("dscr", 1.75))
-            cashflows["dscr"] = dscr_bench
+            bench = _resolve_trade_benchmark(trade, district, cashflows)
 
             from app.finance.multi_schemes import get_all_eligible_schemes
             multi_schemes = get_all_eligible_schemes(cost=project_cost, trade=trade, district=district, state=state)
-            nabard_summary = benchmark.get("summary", f"Grounded in standard rural lending norms in {district}.")
 
             context.update({
                 "trade": trade,
@@ -496,7 +563,8 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
                 "project_cost": project_cost,
                 "financial_structure": fin_result,
                 "cashflows": cashflows,
-                "nabard_benchmark": nabard_summary,
+                "nabard_benchmark": bench["summary"],
+                "benchmark_available": bench["available"],
                 "multi_schemes": multi_schemes
             })
             beneficiary.conversation_context = context
@@ -847,15 +915,10 @@ def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[st
     # 1. Deterministic financial calculation (NEVER LLM)
     fin_result = calculate_financial_structure(project_cost)
 
-    # 2. Query NABARD Trade Benchmarks (In-Memory Reference Data)
-    benchmark = get_trade_benchmark(trade, district)
-    dscr_benchmark = float(benchmark.get("dscr", 1.75))
-    nabard_summary = benchmark.get("summary", f"Grounded in standard rural lending norms in {district}.")
-
-    # 3. Project cash flows & DSCR
+    # 2 & 3. Project cash flows, then apply the NABARD / official trade benchmark (DSCR omitted if none exists)
     cashflows = project_financial_cashflows(project_cost, fin_result["emi"])
-    if dscr_benchmark:
-        cashflows["dscr"] = dscr_benchmark
+    bench = _resolve_trade_benchmark(trade, district, cashflows)
+    nabard_summary = bench["summary"]
 
     from app.finance.multi_schemes import get_all_eligible_schemes
     multi_schemes = get_all_eligible_schemes(
@@ -875,6 +938,7 @@ def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[st
         "financial_structure": fin_result,
         "cashflows": cashflows,
         "nabard_benchmark": nabard_summary,
+        "benchmark_available": bench["available"],
         "multi_schemes": multi_schemes
     })
 
@@ -900,7 +964,7 @@ def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[st
         existing_p.sanctioned_loan = fin_result["loan"]
         existing_p.beneficiary_margin = fin_result["margin"]
         existing_p.monthly_emi = fin_result["emi"]
-        existing_p.projected_dscr = cashflows.get("dscr", 1.65)
+        existing_p.projected_dscr = cashflows.get("dscr")
         db.commit()
     else:
         crud.create_proposal(db, {
@@ -911,7 +975,7 @@ def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[st
             "sanctioned_loan": fin_result["loan"],
             "beneficiary_margin": fin_result["margin"],
             "monthly_emi": fin_result["emi"],
-            "projected_dscr": cashflows.get("dscr", 1.65),
+            "projected_dscr": cashflows.get("dscr"),
             "status": "DRAFT",
             "dpr_pdf_url": None
         })
@@ -927,6 +991,8 @@ def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[st
         available_capital=extracted.get("available_capital"),
         multi_schemes=multi_schemes
     )
+    if not bench["available"]:
+        advisory = f"{advisory}\n\n{NO_BENCHMARK_NOTICE.get(lang, NO_BENCHMARK_NOTICE['english'])}"
 
     send_channel_text(beneficiary, advisory)
     if from_voice:
@@ -954,7 +1020,7 @@ def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
         proposal.sanctioned_loan = fin["loan"]
         proposal.beneficiary_margin = fin["margin"]
         proposal.monthly_emi = fin["emi"]
-        proposal.projected_dscr = cashflows.get("dscr", 1.65)
+        proposal.projected_dscr = cashflows.get("dscr")
         db.commit()
     else:
         proposal_data = {
@@ -965,7 +1031,7 @@ def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
             "sanctioned_loan": fin["loan"],
             "beneficiary_margin": fin["margin"],
             "monthly_emi": fin["emi"],
-            "projected_dscr": cashflows.get("dscr", 1.65),
+            "projected_dscr": cashflows.get("dscr"),
             "status": "DRAFT",
             "dpr_pdf_url": None
         }
@@ -991,7 +1057,7 @@ def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
         "sanctioned_loan": float(proposal.sanctioned_loan),
         "beneficiary_margin": float(proposal.beneficiary_margin),
         "monthly_emi": float(proposal.monthly_emi),
-        "projected_dscr": float(proposal.projected_dscr),
+        "projected_dscr": float(proposal.projected_dscr) if proposal.projected_dscr is not None else None,
         "status": proposal.status,
         "multi_schemes": context.get("multi_schemes") or {},
         "cashflows": context.get("cashflows") or {},

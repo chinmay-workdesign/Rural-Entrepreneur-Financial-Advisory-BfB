@@ -29,7 +29,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     BACKEND_INTERNAL_URL: str = "http://localhost:8000"
     AUTH_SECRET_KEY: str = "sca_rural_enterprise_advisor_secret_key_2026_secure"
-    REAL_DATA_ONLY: bool = False
+    # True: never fall back to synthetic benchmarks; unsupported trades return DATA_NOT_AVAILABLE.
+    REAL_DATA_ONLY: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",
