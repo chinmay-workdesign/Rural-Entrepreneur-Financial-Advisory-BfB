@@ -120,6 +120,11 @@ def signup(
     db: Session = Depends(get_db)
 ):
     """Register a new State Channelizing Agency field officer or manager."""
+    if not settings.ALLOW_PUBLIC_SIGNUP:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Self-registration is disabled. Please contact your SCA administrator for an account."
+        )
     email_clean = payload.email.strip().lower()
     existing = crud.get_user_by_email(db, email_clean)
     if existing:

@@ -74,6 +74,16 @@ class WebhookEvent(Base):
     received_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class BotControl(Base):
+    """On/off switch for each chat channel, set from the officer dashboard. Survives restarts."""
+    __tablename__ = "bot_controls"
+
+    channel = Column(String(20), primary_key=True)  # telegram, whatsapp
+    enabled = Column(Boolean, nullable=False, default=True)
+    changed_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    changed_by = Column(String(120), nullable=True)
+
+
 class User(Base):
     __tablename__ = "users"
 

@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     WHATSAPP_APP_SECRET: str = ""
     PHONE_NUMBER_ID: str = ""
 
+    # WhatsApp via Evolution API (self-hosted, e.g. Docker on localhost:8080). When URL and instance are set,
+    # WhatsApp messages are sent through Evolution instead of the Meta Cloud API.
+    EVOLUTION_API_URL: str = ""
+    EVOLUTION_API_KEY: str = ""
+    EVOLUTION_INSTANCE_NAME: str = ""
+
     # Google Gemini (Free Tier LLM & Multimodal Audio STT)
     GEMINI_API_KEY: str = ""
     # Cheapest models that work for new API keys: flash-lite for text, 3.5 flash-lite for audio input
@@ -33,6 +39,8 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     BACKEND_INTERNAL_URL: str = "http://localhost:8000"
     AUTH_SECRET_KEY: str = "sca_rural_enterprise_advisor_secret_key_2026_secure"
+    # Officer self-registration; switched off on the public deployment (accounts are created by an admin)
+    ALLOW_PUBLIC_SIGNUP: bool = True
     # True: never fall back to synthetic benchmarks; unsupported trades return DATA_NOT_AVAILABLE.
     REAL_DATA_ONLY: bool = True
 

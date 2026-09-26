@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advisor Analytics</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background: #f5f7f9; color: #17212b; }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 245px; background: #10251d; color: #dfeae5; padding: 22px 14px; position: fixed; inset: 0 auto 0 0; overflow-y: auto; }
+  .brand { display:flex; gap:10px; align-items:center; padding: 5px 10px 24px; }
+  .brand-mark { width:36px;height:36px;border-radius:10px;background:#d8e9a8;color:#173023;display:grid;place-items:center;font-weight:800; }
+  .brand strong { display:block; color:white; font-size:15px; }
+  .brand small { color:#91a99f; }
+  .nav-title { font-size:10px; text-transform:uppercase; letter-spacing:1.2px; color:#789187; margin:20px 10px 7px; }
+  .nav a { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 11px; border-radius:8px; color:#c7d6d0; text-decoration:none; font-size:13px; margin:2px 0; cursor:pointer; }
+  .nav a .count { font-size:11px; color:#91a99f; }
+  .nav a.active { background:#1f4033; color:#fff; }
+  .nav a:hover { background:#1a362c; }
+  .main { margin-left:245px; width:calc(100% - 245px); }
+  .topbar { height:70px; background:#fff; border-bottom:1px solid #e2e7e9; display:flex; justify-content:space-between; align-items:center; padding:0 30px; }
+  .crumb { font-size:13px; color:#718087; }
+  .user { display:flex; align-items:center; gap:10px; font-size:13px; }
+  .avatar { width:34px;height:34px;border-radius:50%;background:#dce9df;display:grid;place-items:center;font-weight:700;color:#28513d; }
+  .content { padding:28px 30px 45px; max-width:1450px; }
+  h1 { margin:0; font-size:25px; letter-spacing:-.4px; }
+  .subtitle { color:#718087; margin-top:5px; font-size:13px; max-width:720px; }
+  .page-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; gap:12px; flex-wrap:wrap; }
+  .head-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  button, select { border:1px solid #d5dddf; background:white; color:#34434a; padding:9px 13px; border-radius:7px; font-weight:600; font-size:12px; cursor:pointer; font-family:inherit; }
+  select { padding:8px 10px; min-width:190px; }
+  button.primary { background:#1e5b42; color:white; border-color:#1e5b42; }
+  button.primary:hover { background:#174934; }
+  .scope { display:flex; align-items:center; gap:10px; background:#eef6f1; border:1px solid #cfe5d8; color:#28553b; border-radius:9px; padding:10px 14px; font-size:13px; margin-bottom:18px; }
+  .scope b { font-size:14px; }
+  .scope button { margin-left:auto; padding:6px 10px; }
+  .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
+  .card { background:white; border:1px solid #e1e6e8; border-radius:10px; padding:17px; }
+  .metric-label { color:#718087; font-size:12px; }
+  .metric { font-size:25px; font-weight:750; margin-top:5px; font-variant-numeric:tabular-nums; }
+  .metric-note { font-size:11px; color:#829097; margin-top:4px; }
+  .section { background:white; border:1px solid #e1e6e8; border-radius:10px; margin-bottom:18px; overflow:hidden; }
+  .section-head { padding:16px 18px; border-bottom:1px solid #edf0f1; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .section-head h2 { font-size:15px; margin:0; }
+  .section-head span { font-size:11px; color:#7b898f; }
+  .section-body { padding:18px; }
+  .grid2 { display:grid; grid-template-columns:1.25fr 1fr; gap:18px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+  .grid4 .section, .grid3 .section, .grid2 .section { margin-bottom:0; }
+  .row-gap { margin-bottom:18px; }
+  /* horizontal bars */
+  .bars { display:flex; flex-direction:column; gap:11px; }
+  .bar-row { display:grid; grid-template-columns:minmax(110px,190px) 1fr 74px; gap:10px; align-items:center; font-size:12px; }
+  .bar-label { color:#34434a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-track { height:10px; background:#eef1f2; border-radius:10px; overflow:hidden; }
+  .bar-fill { height:100%; background:#397b5a; border-radius:10px; min-width:2px; transition:width .4s; }
+  .bar-fill.blue { background:#3b6595; } .bar-fill.amber { background:#c48a1b; } .bar-fill.grey { background:#aab6bb; }
+  .bar-val { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+  .bar-val small { color:#8a979d; font-weight:500; margin-left:3px; }
+  /* funnel */
+  .funnel .bar-row { grid-template-columns:minmax(150px,230px) 1fr 96px; }
+  .funnel .bar-track { height:22px; border-radius:6px; }
+  .funnel .bar-fill { border-radius:6px; }
+  /* trend */
+  .trend { display:flex; align-items:flex-end; gap:3px; height:170px; padding-top:8px; border-bottom:1px solid #e1e6e8; }
+  .day { flex:1; display:flex; gap:1px; align-items:flex-end; height:100%; position:relative; }
+  .day .c, .day .d { flex:1; border-radius:3px 3px 0 0; min-height:0; }
+  .day .c { background:#9cc5ae; } .day .d { background:#1e5b42; }
+  .day:hover { background:#f3f6f5; }
+  .day .tip { display:none; position:absolute; bottom:calc(100% + 4px); left:50%; transform:translateX(-50%); background:#10251d; color:white; font-size:11px; padding:6px 8px; border-radius:6px; white-space:nowrap; z-index:5; }
+  .day:hover .tip { display:block; }
+  .axis { display:flex; justify-content:space-between; font-size:10px; color:#8a979d; margin-top:6px; }
+  .legend { display:flex; gap:14px; font-size:11px; color:#66757c; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+  /* district table */
+  .table { width:100%; border-collapse:collapse; }
+  .table th,.table td { text-align:left; padding:11px 10px; border-bottom:1px solid #edf0f1; font-size:12px; }
+  .table th { color:#758289; font-weight:600; background:#fafbfb; cursor:pointer; user-select:none; white-space:nowrap; }
+  .table th:hover { color:#17212b; }
+  .table th .arrow { color:#1e5b42; margin-left:3px; }
+  .table td.num, .table th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .table tr.row { cursor:pointer; }
+  .table tr.row:hover td { background:#f7faf8; }
+  .table tr.row.selected td { background:#eef6f1; font-weight:700; }
+  .table tr:last-child td { border-bottom:0; }
+  .mini-bar { display:inline-block; height:6px; background:#397b5a; border-radius:6px; vertical-align:middle; margin-left:8px; }
+  .muted { color:#8a979d; font-weight:500; }
+  .empty { text-align:center; color:#8a979d; padding:26px 10px; font-size:12px; }
+  .note { font-size:11px; color:#829097; margin-top:12px; line-height:1.5; }
+  .loading { opacity:.55; transition:opacity .2s; }
+  @media(max-width:1150px) { .cards, .grid4 { grid-template-columns:repeat(2,1fr); } .grid2, .grid3 { grid-template-columns:1fr; } }
+  @media(max-width:560px) { .grid4 { grid-template-columns:1fr; } }
+  @media(max-width:760px) {
+    .sidebar { width:70px; padding:15px 8px; }
+    .brand div:not(.brand-mark), .nav-title, .nav a .label { display:none; }
+    .main { margin-left:70px; width:calc(100% - 70px); }
+    .content { padding:20px 15px; } .topbar { padding:0 15px; } .crumb { display:none; }
+    .cards { grid-template-columns:1fr 1fr; } .bar-row, .funnel .bar-row { grid-template-columns:100px 1fr 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">🌾</div>
+      <div><strong>Rural Credit</strong><small>Officer Console</small></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-title">Applications</div>
+      <a href="/admin"><span><span>▦</span> <span class="label">Application review</span></span></a>
+      <div class="nav-title">Administration</div>
+      <a href="/admin/analytics" class="active"><span><span>◔</span> <span class="label">Analytics</span></span></a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb">Karnataka / Rural Credit / Analytics</div>
+      <div class="user">
+        <span id="user-name">…</span><div class="avatar" id="user-avatar">…</div>
+        <button onclick="logout()">Log out</button>
+      </div>
+    </header>
+
+    <div class="content" id="content">
+      <div class="page-head">
+        <div>
+          <h1>Advisor Analytics</h1>
+          <div class="subtitle">Everyone who contacted the Telegram / WhatsApp advisor, how far they got, and what happened to their applications. Counted live from the database.</div>
+        </div>
+        <div class="head-actions">
+          <select id="district-select" onchange="selectDistrict(this.value)" aria-label="District"></select>
+          <button onclick="load()">↻ Refresh</button>
+          <button class="primary" id="export-btn" onclick="exportExcel()">⬇ Export to Excel</button>
+        </div>
+      </div>
+
+      <div id="scope"></div>
+      <div class="cards" id="cards"></div>
+
+      <div class="grid2 row-gap">
+        <section class="section">
+          <div class="section-head"><h2>Conversion funnel</h2><span>People who reached each step</span></div>
+          <div class="section-body"><div class="bars funnel" id="funnel"></div>
+            <div class="note">A person counts for a step if their current conversation reached it or they have an application on file (starting over with /start clears earlier answers).</div></div>
+        </section>
+        <section class="section">
+          <div class="section-head"><h2>Last 30 days</h2>
+            <div class="legend"><span><i style="background:#9cc5ae"></i>New contacts</span><span><i style="background:#1e5b42"></i>DPRs generated</span></div></div>
+          <div class="section-body"><div class="trend" id="trend"></div><div class="axis" id="axis"></div>
+            <div class="note" id="trend-note"></div></div>
+        </section>
+      </div>
+
+      <section class="section">
+        <div class="section-head"><h2>Districts</h2><span>Click a column to sort · click a district to see its statistics</span></div>
+        <div style="overflow-x:auto"><table class="table" id="district-table"></table></div>
+      </section>
+
+      <div class="grid3 row-gap">
+        <section class="section"><div class="section-head"><h2>Where people are now</h2><span>Current conversation</span></div><div class="section-body"><div class="bars" id="current_stage"></div></div></section>
+        <section class="section"><div class="section-head"><h2>Channel</h2><span>People contacted</span></div><div class="section-body"><div class="bars" id="channels"></div></div></section>
+        <section class="section"><div class="section-head"><h2>Language chosen</h2><span>People contacted</span></div><div class="section-body"><div class="bars" id="languages"></div></div></section>
+      </div>
+
+      <div class="grid3 row-gap">
+        <section class="section"><div class="section-head"><h2>Application status</h2><span>Officer decisions</span></div><div class="section-body"><div class="bars" id="status"></div></div></section>
+        <section class="section"><div class="section-head"><h2>Scheme / corporation</h2><span>Applications</span></div><div class="section-body"><div class="bars" id="schemes"></div></div></section>
+        <section class="section"><div class="section-head"><h2>Businesses</h2><span>As named by applicants</span></div><div class="section-body"><div class="bars" id="businesses"></div></div></section>
+      </div>
+
+      <div class="grid4 row-gap">
+        <section class="section"><div class="section-head"><h2>Gender</h2><span>Applicants</span></div><div class="section-body"><div class="bars" id="gender"></div></div></section>
+        <section class="section"><div class="section-head"><h2>Social category</h2><span>Applicants</span></div><div class="section-body"><div class="bars" id="social_category"></div></div></section>
+        <section class="section"><div class="section-head"><h2>Age</h2><span>Applicants</span></div><div class="section-body"><div class="bars" id="age"></div></div></section>
+        <section class="section"><div class="section-head"><h2>Area</h2><span>Applicants</span></div><div class="section-body"><div class="bars" id="area"></div></div></section>
+      </div>
+      <div class="note" id="generated"></div>
+    </div>
+  </main>
+</div>
+<script>
+let data = null, allDistricts = [], district = new URLSearchParams(location.search).get('district') || '';
+let sortKey = 'contacts', sortDir = -1;
+
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function inr(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const n = Math.round(Number(v)), s = String(Math.abs(n));
+  const body = s.length > 3 ? s.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + s.slice(-3) : s;
+  return '₹' + (n < 0 ? '-' : '') + body;
+}
+function lakh(v) {
+  if (!v) return '₹0';
+  return v >= 1e7 ? '₹' + (v / 1e7).toFixed(2) + ' Cr' : v >= 1e5 ? '₹' + (v / 1e5).toFixed(2) + ' L' : inr(v);
+}
+const pct = v => v === null || v === undefined ? '—' : v + '%';
+
+async function initAuth() {
+  const res = await fetch('/auth/me');
+  if (!res.ok) { location.href = '/login'; return false; }
+  const u = await res.json();
+  if (u.role !== 'ADMIN') { location.href = '/admin'; return false; }
+  document.getElementById('user-name').textContent = `${u.full_name} · administrator`;
+  const parts = u.full_name.trim().split(/\s+/);
+  document.getElementById('user-avatar').textContent = (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  return true;
+}
+async function logout() { await fetch('/auth/logout', {method: 'POST'}); location.href = '/login'; }
+
+async function load() {
+  document.getElementById('content').classList.add('loading');
+  const res = await fetch('/internal/analytics' + (district ? '?district=' + encodeURIComponent(district) : ''));
+  document.getElementById('content').classList.remove('loading');
+  if (res.status === 401) { location.href = '/login'; return; }
+  if (res.status === 403) { location.href = '/admin'; return; }
+  data = await res.json();
+  allDistricts = data.districts;
+  render();
+}
+
+function exportExcel() {
+  // Same scope as the page: all districts, or the district being viewed
+  location.href = '/internal/analytics/export' + (district ? '?district=' + encodeURIComponent(district) : '');
+}
+
+function selectDistrict(name) {
+  district = name || '';
+  const url = new URL(location.href);
+  if (district) url.searchParams.set('district', district); else url.searchParams.delete('district');
+  history.replaceState(null, '', url);
+  load();
+}
+
+function render() {
+  const s = data.summary;
+  // district picker
+  document.getElementById('district-select').innerHTML = '<option value="">All districts</option>' +
+    allDistricts.map(d => `<option value="${esc(d.district)}" ${d.district === data.district ? 'selected' : ''}>${esc(d.district)} (${d.contacts})</option>`).join('');
+  document.getElementById('scope').innerHTML = data.district
+    ? `<div class="scope">Showing statistics for <b>${esc(data.district)}</b> district<button onclick="selectDistrict('')">✕ Show all districts</button></div>` : '';
+
+  document.getElementById('cards').innerHTML = [
+    ['People contacted', s.contacts, `${s.contacts_telegram} Telegram · ${s.contacts_whatsapp} WhatsApp`],
+    ['DPRs generated', s.dprs_generated, `by ${s.people_with_dpr} ${s.people_with_dpr === 1 ? 'person' : 'people'}`],
+    ['Contact → DPR', pct(s.conversion_pct), 'people who went on to generate a DPR'],
+    ['Awaiting review', s.awaiting, `${s.sent_back} sent back · ${s.field_verified} field-verified`],
+    ['Sanctioned', s.sanctioned, `${s.rejected} rejected · ${lakh(s.total_loan_sanctioned)} loans sanctioned`],
+    ['Project cost requested', lakh(s.total_project_cost), s.avg_project_cost ? `average ${lakh(s.avg_project_cost)} per application` : 'no applications yet'],
+    ['Loans requested', lakh(s.total_loan_requested), `across ${s.applications} application${s.applications === 1 ? '' : 's'}`],
+    ['Applicants’ own money', lakh(s.total_own_contribution), 'margin money they will put in'],
+  ].map(([l, v, n]) => `<div class="card"><div class="metric-label">${l}</div><div class="metric">${v}</div><div class="metric-note">${n}</div></div>`).join('');
+
+  // funnel
+  const top = data.funnel[0].count || 0;
+  document.getElementById('funnel').innerHTML = top ? data.funnel.map((f, i) => `
+    <div class="bar-row"><div class="bar-label" title="${esc(f.label)}">${i + 1}. ${esc(f.label)}</div>
+      <div class="bar-track"><div class="bar-fill ${i >= 5 ? 'blue' : ''}" style="width:${top ? 100 * f.count / top : 0}%"></div></div>
+      <div class="bar-val">${f.count}<small>${top ? Math.round(100 * f.count / top) + '%' : ''}</small></div></div>`).join('')
+    : '<div class="empty">Nobody has contacted the bot yet.</div>';
+
+  // trend
+  const max = Math.max(1, ...data.trend.map(t => Math.max(t.contacts, t.dprs)));
+  const fmt = d => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {day: 'numeric', month: 'short'});
+  document.getElementById('trend').innerHTML = data.trend.map(t => `
+    <div class="day"><div class="c" style="height:${100 * t.contacts / max}%"></div><div class="d" style="height:${100 * t.dprs / max}%"></div>
+      <div class="tip">${fmt(t.day)}: ${t.contacts} new contact${t.contacts === 1 ? '' : 's'}, ${t.dprs} DPR${t.dprs === 1 ? '' : 's'}</div></div>`).join('');
+  const tr = data.trend;
+  document.getElementById('axis').innerHTML = `<span>${fmt(tr[0].day)}</span><span>${fmt(tr[Math.floor(tr.length / 2)].day)}</span><span>Today</span>`;
+  const sumC = tr.reduce((a, t) => a + t.contacts, 0), sumD = tr.reduce((a, t) => a + t.dprs, 0);
+  document.getElementById('trend-note').textContent = `${sumC} new contact${sumC === 1 ? '' : 's'} and ${sumD} DPR${sumD === 1 ? '' : 's'} in the last 30 days (India time). Hover a day for its numbers.`;
+
+  // breakdowns
+  const colors = {channels: 'blue', languages: 'blue', current_stage: 'grey', status: 'amber'};
+  ['current_stage', 'channels', 'languages', 'status', 'schemes', 'businesses', 'gender', 'social_category', 'age', 'area']
+    .forEach(k => document.getElementById(k).innerHTML = bars(data[k], colors[k]));
+
+  renderDistricts();
+  document.getElementById('generated').textContent = 'Figures as of ' + new Date(data.generated_at).toLocaleString('en-IN') + '. Refreshes every minute.';
+}
+
+function bars(items, color) {
+  const total = items.reduce((a, i) => a + i.count, 0);
+  if (!total) return '<div class="empty">No data yet.</div>';
+  const max = Math.max(...items.map(i => i.count));
+  return items.map(i => `<div class="bar-row"><div class="bar-label" title="${esc(i.label)}">${esc(i.label)}</div>
+    <div class="bar-track"><div class="bar-fill ${i.label === 'Not stated' ? 'grey' : (color || '')}" style="width:${100 * i.count / max}%"></div></div>
+    <div class="bar-val">${i.count}<small>${Math.round(100 * i.count / total)}%</small></div></div>`).join('');
+}
+
+const COLS = [
+  ['district', 'District', false], ['contacts', 'People contacted', true], ['people_with_dpr', 'Generated a DPR', true],
+  ['conversion_pct', 'Contact → DPR', true], ['applications', 'Applications', true], ['awaiting', 'Awaiting review', true],
+  ['sanctioned', 'Sanctioned', true], ['rejected', 'Rejected', true], ['project_cost', 'Project cost requested', true],
+];
+function sortBy(key) {
+  if (sortKey === key) sortDir = -sortDir; else { sortKey = key; sortDir = key === 'district' ? 1 : -1; }
+  renderDistricts();
+}
+function renderDistricts() {
+  const rows = [...allDistricts].sort((a, b) => {
+    if ((a.district === 'Not stated') !== (b.district === 'Not stated')) return a.district === 'Not stated' ? 1 : -1;
+    const x = a[sortKey] ?? -1, y = b[sortKey] ?? -1;
+    return (typeof x === 'string' ? x.localeCompare(y) : x - y) * sortDir;
+  });
+  const maxC = Math.max(1, ...rows.map(r => r.contacts));
+  const table = document.getElementById('district-table');
+  if (!rows.length) { table.innerHTML = '<tr><td class="empty">No contacts yet.</td></tr>'; return; }
+  table.innerHTML = '<tr>' + COLS.map(([k, l, n]) => `<th class="${n ? 'num' : ''}" onclick="sortBy('${k}')">${l}${sortKey === k ? `<span class="arrow">${sortDir > 0 ? '▲' : '▼'}</span>` : ''}</th>`).join('') + '</tr>' +
+    rows.map(r => `<tr class="row ${r.district === data.district ? 'selected' : ''}" onclick="selectDistrict(${esc(JSON.stringify(r.district === data.district ? '' : r.district))})" title="${r.district === data.district ? 'Show all districts' : 'Show statistics for ' + esc(r.district)}">
+      <td>${esc(r.district)}</td>
+      <td class="num">${r.contacts}<span class="mini-bar" style="width:${50 * r.contacts / maxC}px"></span></td>
+      <td class="num">${r.people_with_dpr}</td><td class="num">${pct(r.conversion_pct)}</td>
+      <td class="num">${r.applications}</td><td class="num">${r.awaiting}</td><td class="num">${r.sanctioned}</td><td class="num">${r.rejected}</td>
+      <td class="num">${lakh(r.project_cost)}</td></tr>`).join('');
+}
+
+(async () => { if (await initAuth()) { await load(); setInterval(load, 60000); } })();
+</script>
+</body>
+</html>

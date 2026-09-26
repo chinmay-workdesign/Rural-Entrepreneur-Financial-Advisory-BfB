@@ -5,7 +5,7 @@ from app.db import crud
 from app.dialogue.conversation_state import process_user_query
 from app.main import app
 from fastapi.testclient import TestClient
-from tests.intake_helpers import complete_intake
+from tests.intake_helpers import complete_intake, login_officer
 
 client = TestClient(app)
 
@@ -70,6 +70,7 @@ def test_full_dialogue_to_sanction_flow():
         "remarks": "Shop visited. Margin money verified in Canara Bank account."
     }
 
+    login_officer(client)
     resp = client.post(f"/internal/sanction/{proposal_id}", json=sanction_payload)
     assert resp.status_code == 200
     assert resp.json()["new_status"] == "SANCTIONED"

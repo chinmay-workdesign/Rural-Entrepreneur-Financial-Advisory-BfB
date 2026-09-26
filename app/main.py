@@ -15,7 +15,7 @@ from app.db.session import engine, Base, get_db, init_db
 from app.db import crud, models
 from app.whatsapp.webhook_handler import router as whatsapp_router
 from app.whatsapp.client import send_whatsapp_text, send_whatsapp_document
-from app.auth.routes import router as auth_router, get_optional_current_user, COOKIE_NAME
+from app.auth.routes import router as auth_router, get_current_user, get_optional_current_user, COOKIE_NAME
 from app.auth.security import decode_access_token
 
 # Logging configuration
@@ -53,10 +53,12 @@ async def lifespan(app: FastAPI):
         and os.environ.get("RUN_TELEGRAM_POLLING", "true").lower() == "true"
     )
     if should_run_bot:
-        from scripts.run_telegram_polling import poll_telegram_updates
-        logger.info("Starting integrated Telegram long-polling daemon thread...")
-        t = threading.Thread(target=poll_telegram_updates, daemon=True)
-        t.start()
+        from app import bot_control
+        if bot_control.is_enabled("telegram"):
+            logger.info("Starting integrated Telegram long-polling daemon thread...")
+            bot_control.start_telegram()
+        else:
+            logger.info("Telegram bot is switched off in the officer dashboard; not polling.")
     yield
     logger.info("Shutting down Rural Advisor API...")
 
@@ -175,12 +177,87 @@ def _reference_cost(trade: str, district: Optional[str], cost: float) -> Dict[st
     }
 
 
+@app.get("/admin/analytics", response_class=HTMLResponse)
+def get_analytics_page(request: Request, db: Session = Depends(get_db)):
+    """Statistics page for administrators: contacts, DPRs, decisions, overall and per district."""
+    user = _session_user(request, db)
+    if not user:
+        return _without_stale_cookie(RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND), request)
+    if user.role != "ADMIN":
+        return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
+    with open(os.path.join(os.path.dirname(__file__), "templates", "analytics.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+@app.get("/internal/analytics")
+def get_analytics(
+    district: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Counts behind the analytics page, for all districts or one (`?district=Belagavi`). Admins only."""
+    if current_user.role != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Analytics are available to administrators only.")
+    from app import analytics
+    return analytics.compute(db, district=district)
+
+
+@app.get("/internal/analytics/export")
+def export_analytics(
+    district: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Excel workbook of the analytics (all districts or one) with the full applications and contacts lists."""
+    if current_user.role != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Analytics are available to administrators only.")
+    import re
+    from datetime import datetime
+    from fastapi.responses import Response as RawResponse
+    from app.analytics import IST
+    from app.analytics_export import build_workbook
+    scope = re.sub(r"[^A-Za-z0-9]+", "-", district.strip()).strip("-").lower() if district and district.strip() else "all-districts"
+    return RawResponse(
+        content=build_workbook(db, district=district),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="advisor-analytics-{scope}-{datetime.now(IST).date().isoformat()}.xlsx"'},
+    )
+
+
+@app.get("/internal/bots")
+def bot_status(current_user: models.User = Depends(get_current_user)):
+    """Whether the Telegram and WhatsApp bots are running (shown to every officer)."""
+    from app import bot_control
+    return {**bot_control.status(), "can_control": current_user.role == "ADMIN"}
+
+
+@app.post("/internal/bots/{channel}/{action}")
+def control_bot(channel: str, action: str, current_user: models.User = Depends(get_current_user)):
+    """Start or stop a bot. Admins only. A stopped bot ignores messages; they are not answered later."""
+    from app import bot_control
+    if current_user.role != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only an administrator can start or stop the bots.")
+    if channel not in bot_control.CHANNELS or action not in ("start", "stop"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown bot or action.")
+    who = current_user.email
+    if channel == "telegram":
+        if action == "start":
+            if not bot_control.start_telegram(changed_by=who):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="TELEGRAM_BOT_TOKEN is not configured.")
+        else:
+            bot_control.stop_telegram(changed_by=who)
+    else:
+        (bot_control.start_whatsapp if action == "start" else bot_control.stop_whatsapp)(changed_by=who)
+    return bot_control.status()
+
+
 @app.get("/internal/proposals")
 def list_proposals(
     status: Optional[str] = None,
     district: Optional[str] = None,
     scheme: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),  # officers only: contains applicants' personal data
 ):
     """
     Applications for the SCA officer dashboard. Every value comes from the applicant's confirmed answers,
@@ -258,7 +335,7 @@ def sanction_proposal(
     proposal_id: str,
     payload: VerificationRequest,
     db: Session = Depends(get_db),
-    current_user: Optional[models.User] = Depends(get_optional_current_user)
+    current_user: models.User = Depends(get_current_user)  # only a logged-in officer can decide
 ):
     """
     SCA Field Officer approval endpoint:

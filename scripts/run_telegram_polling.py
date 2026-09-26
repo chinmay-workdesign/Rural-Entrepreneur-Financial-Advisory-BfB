@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from app.config import settings
 from app.db.session import init_db
 from app.dialogue.conversation_state import process_telegram_query, process_telegram_voice_query
+from app import bot_control
 
 import socket
 
@@ -73,6 +74,7 @@ def acquire_singleton_lock():
 
 def poll_telegram_updates():
     acquire_singleton_lock()
+    bot_control.note_telegram_polling_started()
     if not settings.TELEGRAM_BOT_TOKEN:
         print("\n" + "="*70)
         print("⚠️  ERROR: TELEGRAM_BOT_TOKEN is not configured in .env!")
@@ -116,7 +118,7 @@ def poll_telegram_updates():
     except Exception as e:
         logger.warning(f"Could not flush updates on startup: {e}")
 
-    while True:
+    while not bot_control.telegram_should_stop():
         try:
             url = f"{bot_url}/getUpdates?offset={offset}&timeout=20"
             resp = requests.get(url, timeout=25)
@@ -133,6 +135,9 @@ def poll_telegram_updates():
 
                 message = update.get("message")
                 if not message:
+                    continue
+                # No queued replies: skip messages sent while the bot was stopped (or arriving after it stopped)
+                if not bot_control.accept_message("telegram", message.get("date"), via_polling=True):
                     continue
 
                 chat = message.get("chat", {})
@@ -169,6 +174,7 @@ def poll_telegram_updates():
         finally:
             pass
 
+    print("Stopped Telegram polling.", flush=True)
     if _singleton_socket:
         try:
             _singleton_socket.close()

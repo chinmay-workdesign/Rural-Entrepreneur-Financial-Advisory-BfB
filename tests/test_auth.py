@@ -167,3 +167,12 @@ def test_stale_cookie_for_deleted_user_does_not_loop():
     c.cookies.set("sca_auth_token", stale)
     admin = c.get("/admin")
     assert admin.status_code == 302 and admin.headers["location"] == "/login"
+
+
+def test_applications_and_decisions_require_officer_login():
+    """Applicants' personal data and loan decisions are for logged-in officers only."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    anon = TestClient(app)
+    assert anon.get("/internal/proposals").status_code == 401
+    assert anon.post("/internal/sanction/some-id", json={"field_officer_id": "x", "recommendation": "APPROVE"}).status_code == 401

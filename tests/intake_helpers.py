@@ -39,3 +39,15 @@ def complete_intake(send: Callable[[str], None], load_beneficiary: Callable, ans
             return
         send(answers[pending])
     raise AssertionError("Intake did not finish")
+
+
+def login_officer(client) -> None:
+    """Logs the test client in as the seeded Belagavi field officer (the session cookie is kept by the client)."""
+    from app.db import crud
+    db = SessionLocal()
+    try:
+        crud.seed_default_users(db)
+    finally:
+        db.close()
+    res = client.post("/auth/login", json={"email": "officer.belagavi@sca.gov.in", "password": "Officer@123"})
+    assert res.status_code == 200, res.text

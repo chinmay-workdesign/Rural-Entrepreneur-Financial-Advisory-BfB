@@ -8,6 +8,8 @@ from app.db import crud
 from app.whatsapp.client import (
     send_whatsapp_text,
     send_whatsapp_document,
+    send_whatsapp_voice,
+    send_whatsapp_buttons,
     download_media_bytes as download_whatsapp_media,
 )
 from app.telegram.client import (
@@ -107,13 +109,21 @@ LANGUAGE_KEYBOARD = {
     "one_time_keyboard": True
 }
 
+# WhatsApp (Evolution API) buttons; a tap returns the id, e.g. "lang_3"
+LANGUAGE_BUTTONS = [
+    {"displayText": "1. English", "id": "lang_1"},
+    {"displayText": "2. हिन्दी (Hindi)", "id": "lang_2"},
+    {"displayText": "3. ಕನ್ನಡ (Kannada)", "id": "lang_3"},
+    {"displayText": "4. తెలుగు (Telugu)", "id": "lang_4"},
+    {"displayText": "5. मराठी (Marathi)", "id": "lang_5"},
+]
+_LANGUAGE_BUTTON_IDS = {"lang_1": "english", "lang_2": "hindi", "lang_3": "kannada", "lang_4": "telugu", "lang_5": "marathi"}
+
 LANGUAGE_CHOICES = {
     "1": "english",
     "1.": "english",
     "1. english": "english",
     "english": "english",
-    "eng": "english",
-    "en": "english",
 
     "2": "hindi",
     "2.": "hindi",
@@ -122,7 +132,6 @@ LANGUAGE_CHOICES = {
     "hindi": "hindi",
     "हिंदी": "hindi",
     "हिन्दी": "hindi",
-    "hi": "hindi",
 
     "3": "kannada",
     "3.": "kannada",
@@ -130,7 +139,6 @@ LANGUAGE_CHOICES = {
     "3. ಕನ್ನಡ (kannada)": "kannada",
     "kannada": "kannada",
     "ಕನ್ನಡ": "kannada",
-    "kn": "kannada",
 
     "4": "telugu",
     "4.": "telugu",
@@ -139,7 +147,6 @@ LANGUAGE_CHOICES = {
     "telugu": "telugu",
     "telgu": "telugu",
     "తెలుగు": "telugu",
-    "te": "telugu",
 
     "5": "marathi",
     "5.": "marathi",
@@ -147,7 +154,6 @@ LANGUAGE_CHOICES = {
     "5. मराठी (marathi)": "marathi",
     "marathi": "marathi",
     "मराठी": "marathi",
-    "mr": "marathi",
 }
 
 LANGUAGE_CONFIRMATIONS = {
@@ -175,7 +181,9 @@ def _resolve_language_choice(text: str, allow_numeric: bool = True) -> Optional[
     "ಕನ್ನಡ") changes it, so answers such as "2 lakh", "Hi" or "Bengaluru" never switch the language.
     """
     t = text.strip().lower().rstrip(".!")
-    # Menu buttons, e.g. "2. हिंदी (Hindi)", work at any time
+    # WhatsApp button ids and Telegram keyboard buttons, e.g. "2. हिंदी (Hindi)", work at any time
+    if t in _LANGUAGE_BUTTON_IDS:
+        return _LANGUAGE_BUTTON_IDS[t]
     button = re.match(r"^([1-5])\.\s+\S", t)
     if button and "(" in t or t == "1. english":
         return {"1": "english", "2": "hindi", "3": "kannada", "4": "telugu", "5": "marathi"}[button.group(1)]
@@ -291,6 +299,22 @@ def send_channel_voice(beneficiary, voice_bytes: bytes, caption: Optional[str] =
     """Dispatch outbound voice note to beneficiary's active channel (Telegram or WhatsApp)."""
     if getattr(beneficiary, "primary_channel", "") == "telegram" and beneficiary.telegram_chat_id:
         send_telegram_voice(beneficiary.telegram_chat_id, voice_bytes, caption=caption)
+    elif beneficiary.whatsapp_number:
+        send_whatsapp_voice(beneficiary.whatsapp_number, voice_bytes, caption=caption)
+
+
+def send_channel_language_menu(beneficiary):
+    """Language menu: reply keyboard on Telegram, tap-able buttons on WhatsApp (plain text if buttons fail)."""
+    if getattr(beneficiary, "primary_channel", "") == "telegram" and beneficiary.telegram_chat_id:
+        send_telegram_text(beneficiary.telegram_chat_id, LANGUAGE_PROMPT_MSG, reply_markup=LANGUAGE_KEYBOARD)
+    else:
+        send_whatsapp_buttons(
+            recipient_phone=beneficiary.whatsapp_number,
+            title="🌐 Select your language / ಭಾಷೆ ಆಯ್ಕೆಮಾಡಿ / भाषा चुनें",
+            description=LANGUAGE_PROMPT_MSG,
+            buttons=LANGUAGE_BUTTONS,
+            footer="Rural Micro-Enterprise Advisor",
+        )
 
 def send_channel_document(beneficiary, document_url: str, filename: str, caption: str, document_bytes: Optional[bytes] = None):
     """Dispatch outbound document to beneficiary's active channel (Telegram or WhatsApp)."""
@@ -302,7 +326,8 @@ def send_channel_document(beneficiary, document_url: str, filename: str, caption
             recipient_phone=beneficiary.whatsapp_number,
             document_url=document_url,
             filename=filename,
-            caption=caption
+            caption=caption,
+            document_bytes=document_bytes
         )
 
 
@@ -360,10 +385,22 @@ def process_telegram_query(chat_id: str, text: str, user_name: Optional[str] = N
 
 # ==================== WHATSAPP HANDLERS ====================
 
-def process_voice_query(from_phone: str, media_id: str):
-    """Pipeline for WhatsApp voice notes: download -> Gemini STT -> dialogue."""
-    logger.info(f"Processing WhatsApp voice query from {from_phone} with media_id {media_id}")
-    audio_bytes = download_whatsapp_media(media_id)
+_VOICE_NOT_HEARD = {
+    "kannada": "ಕ್ಷಮಿಸಿ, ನಿಮ್ಮ ಧ್ವನಿ ಸಂದೇಶ ಸ್ಪಷ್ಟವಾಗಿ ಕೇಳಿಸಲಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೊಮ್ಮೆ ಸ್ಪಷ್ಟವಾಗಿ ಮಾತನಾಡಿ ಅಥವಾ ಸಂದೇಶವನ್ನು ಟೈಪ್ ಮಾಡಿ ಕಳುಹಿಸಿ.",
+    "hindi": "क्षमा करें, आपकी आवाज़ स्पष्ट रूप से सुनाई नहीं दी। कृपया फिर से बोलें या टेक्स्ट लिखकर भेजें।",
+    "telugu": "క్షమించండి, మీ వాయిస్ సందేశం స్పష్టంగా వినిపించలేదు. దయచేసి మళ్లీ స్పష్టంగా మాట్లాడండి లేదా టెక్స్ట్ మెసేజ్ పంపండి.",
+    "marathi": "क्षमस्व, आपला आवाज स्पष्टपणे ऐकू आला नाही. कृपया पुन्हा स्पष्टपणे बोला किंवा संदेश टाईप करून पाठवा.",
+    "english": "Sorry, we could not hear your voice clearly. Please speak clearly again or reply with text.",
+}
+
+
+def process_voice_query(from_phone: str, media_data: Any):
+    """
+    WhatsApp voice notes: download -> Gemini STT -> dialogue. `media_data` is the Evolution message data
+    (or a Meta media id). The selected language is kept, as on Telegram.
+    """
+    logger.info(f"Processing WhatsApp voice query from {from_phone}")
+    audio_bytes = download_whatsapp_media(media_data)
     if not audio_bytes:
         send_whatsapp_text(from_phone, "Sorry, we could not retrieve your voice note. Please send your message again.")
         return
@@ -376,20 +413,20 @@ def process_voice_query(from_phone: str, media_id: str):
         db.close()
 
     transcription = transcribe_audio(audio_bytes, source_language=lang)
-    logger.info(f"Transcribed WhatsApp voice note: '{transcription}'")
-
-    if not transcription:
-        send_whatsapp_text(from_phone, "We could not understand the audio clearly. Please reply with text.")
+    logger.info(f"WhatsApp voice note transcribed: '{transcription}'")
+    if not transcription or not transcription.strip():
+        send_whatsapp_text(from_phone, _VOICE_NOT_HEARD.get(lang, _VOICE_NOT_HEARD["english"]))
         return
 
-    process_user_query(from_phone, transcription)
+    process_user_query(from_phone, transcription, from_voice=True)
 
-def process_user_query(from_phone: str, user_text: str):
-    """Process incoming text message from WhatsApp."""
+
+def process_user_query(from_phone: str, user_text: str, from_voice: bool = False):
+    """Process incoming text message (or voice transcript) from WhatsApp."""
     db = SessionLocal()
     try:
         beneficiary = crud.get_or_create_beneficiary(db, from_phone)
-        _handle_user_turn(db, beneficiary, user_text)
+        _handle_user_turn(db, beneficiary, user_text, from_voice=from_voice)
     finally:
         db.close()
 
@@ -428,7 +465,7 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
         # A new conversation starts empty: nothing from an earlier conversation is reused
         beneficiary.conversation_context = {}
         db.commit()
-        send_channel_text(beneficiary, LANGUAGE_PROMPT_MSG, reply_markup=LANGUAGE_KEYBOARD)
+        send_channel_language_menu(beneficiary)
         return
 
     # 2. Check if user selected or typed a language choice (e.g. 1-5, 'telugu', 'telgu', 'marathi', etc.)
@@ -496,7 +533,7 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
             return
 
         # Otherwise re-send language selection prompt
-        send_channel_text(beneficiary, LANGUAGE_PROMPT_MSG, reply_markup=LANGUAGE_KEYBOARD)
+        send_channel_language_menu(beneficiary)
         return
 
     lang = beneficiary.preferred_language or "kannada"
