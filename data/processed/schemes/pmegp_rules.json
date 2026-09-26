@@ -1,0 +1,165 @@
+{
+  "scheme_name": "Prime Minister's Employment Generation Programme (PMEGP)",
+  "issuing_ministry": "Ministry of Micro, Small & Medium Enterprises, Government of India",
+  "nodal_agency": "Khadi and Village Industries Commission (KVIC)",
+  "source_id": "PMEGP_REVISED_GUIDELINES_2023",
+  "source_document": "PMEGP Revised Guidelines 22-23.pdf",
+  "document_reference": "No: PMEGP/UdhyamReg./01/2023 dated 07-12-2023",
+  "operational_cycle": "15th Finance Commission Cycle (2021-22 to 2025-26)",
+  "rules": [
+    {
+      "rule_id": "PMEGP_MAX_PROJECT_COST_MANUFACTURING",
+      "parameter": "MAX_PROJECT_COST",
+      "sector": "MANUFACTURING",
+      "value": 5000000.0,
+      "unit": "INR",
+      "conditions": "Admissible project cost limit for margin money subsidy calculation for new units",
+      "source_page": 5,
+      "section": "Para 3.2 Note 1",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_MAX_PROJECT_COST_SERVICE_BUSINESS",
+      "parameter": "MAX_PROJECT_COST",
+      "sector": "SERVICE_OR_BUSINESS",
+      "value": 2000000.0,
+      "unit": "INR",
+      "conditions": "Admissible project cost limit for margin money subsidy calculation for new units",
+      "source_page": 5,
+      "section": "Para 3.2 Note 2",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_MARGIN_MONEY_SUBSIDY_RURAL_SPECIAL",
+      "parameter": "SUBSIDY_PCT",
+      "area": "RURAL",
+      "category": "SPECIAL (SC/ST/OBC/Women/Minority/Ex-Servicemen/Transgender/PH/NER/Aspirational Districts/Hill & Border areas)",
+      "value": 35.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "Payable as government margin money grant, held in lock-in TDR for 3 years",
+      "source_page": 4,
+      "section": "Para 3.2(i) Table",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_OWN_CONTRIBUTION_RURAL_SPECIAL",
+      "parameter": "OWN_CONTRIBUTION_MIN_PCT",
+      "area": "RURAL",
+      "category": "SPECIAL (SC/ST/OBC/Women/Minority/etc.)",
+      "value": 5.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "Mandatory equity contribution from beneficiary prior to first loan disbursement",
+      "source_page": 4,
+      "section": "Para 3.2(i) Table",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_MARGIN_MONEY_SUBSIDY_RURAL_GENERAL",
+      "parameter": "SUBSIDY_PCT",
+      "area": "RURAL",
+      "category": "GENERAL",
+      "value": 25.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "Payable as government margin money grant for rural general category beneficiaries",
+      "source_page": 4,
+      "section": "Para 3.2(i) Table",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_OWN_CONTRIBUTION_RURAL_GENERAL",
+      "parameter": "OWN_CONTRIBUTION_MIN_PCT",
+      "area": "RURAL",
+      "category": "GENERAL",
+      "value": 10.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "Mandatory equity contribution for general category",
+      "source_page": 4,
+      "section": "Para 3.2(i) Table",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_MARGIN_MONEY_SUBSIDY_URBAN_SPECIAL",
+      "parameter": "SUBSIDY_PCT",
+      "area": "URBAN",
+      "category": "SPECIAL",
+      "value": 25.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "Urban special category margin money subsidy",
+      "source_page": 4,
+      "section": "Para 3.2(i) Table",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_MARGIN_MONEY_SUBSIDY_URBAN_GENERAL",
+      "parameter": "SUBSIDY_PCT",
+      "area": "URBAN",
+      "category": "GENERAL",
+      "value": 15.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "Urban general category margin money subsidy",
+      "source_page": 4,
+      "section": "Para 3.2(i) Table",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_BANK_FINANCE_PROPORTION",
+      "parameter": "BANK_LOAN_BALANCE_SHARE",
+      "value": "BALANCE_PROJECT_COST",
+      "unit": "CALCULATED",
+      "conditions": "Total Project Cost minus Beneficiary Own Contribution minus Margin Money Subsidy",
+      "source_page": 5,
+      "section": "Para 3.2 Note 3",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_REPAYMENT_PERIOD_RANGE",
+      "parameter": "REPAYMENT_TENURE_YEARS",
+      "value": "3-7",
+      "min_years": 3,
+      "max_years": 7,
+      "unit": "YEARS",
+      "conditions": "Repayment schedule ranges between 3 to 7 years after initial moratorium prescribed by financing bank",
+      "source_page": 10,
+      "section": "Para 8 (Rate of Interest & Repayment)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_MIN_AGE_ELIGIBILITY",
+      "parameter": "MIN_AGE",
+      "value": 18,
+      "unit": "YEARS",
+      "conditions": "Any individual above 18 years of age",
+      "source_page": 5,
+      "section": "Para 4.1(i)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_MIN_EDUCATION_QUALIFICATION",
+      "parameter": "MIN_EDUCATION",
+      "value": "VIII Standard Pass",
+      "conditions": "Required for projects costing above ₹10 Lakhs in Manufacturing and above ₹5 Lakhs in Service/Business",
+      "source_page": 6,
+      "section": "Para 4.1(iii)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_FAMILY_BENEFIT_RESTRICTION",
+      "parameter": "FAMILY_LIMIT",
+      "value": 1,
+      "unit": "PERSON_PER_FAMILY",
+      "conditions": "Only one person from one family (self and spouse) eligible",
+      "source_page": 7,
+      "section": "Para 4.1 Note 1",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_MANDATORY_REGISTRATION",
+      "parameter": "PORTAL_REGISTRATION",
+      "value": "UDYAM",
+      "conditions": "All new units must be mandatorily registered under Udyam Portal before margin money adjustment",
+      "source_page": 7,
+      "section": "Para 4.1(vi)",
+      "verification_status": "VERIFIED"
+    }
+  ]
+}
