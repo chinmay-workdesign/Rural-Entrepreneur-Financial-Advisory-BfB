@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Any, Dict, Optional, List
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -155,6 +155,26 @@ def get_admin_dashboard(request: Request, db: Session = Depends(get_db)):
     """)
 
 
+def _reference_cost(trade: str, district: Optional[str], cost: float) -> Dict[str, Any]:
+    """Official unit cost for the activity (NABARD) or a labelled historical profile, and the variance."""
+    from app.finance.repository import benchmark_repository
+    bench = benchmark_repository.get_benchmark(trade, district=district or "")
+    if bench.get("status") == "DATA_NOT_AVAILABLE" or not bench.get("total_cost"):
+        return {"available": False}
+    ref = float(bench["total_cost"])
+    is_nabard = bench.get("source_id") == "NABARD_KA_UC_BOOKLET_2026_27"
+    return {
+        "available": True,
+        "is_official_unit_cost": is_nabard,
+        "unit": bench.get("sub_activity") or bench.get("activity"),
+        "reference_cost": ref,
+        "source": ("NABARD Karnataka Unit Cost Booklet 2026-27" if is_nabard
+                   else f"{bench.get('source_organization')} model project profile ({bench.get('publication_year')})"),
+        "source_page": bench.get("source_page"),
+        "historical_warning": bench.get("historical_warning"),
+    }
+
+
 @app.get("/internal/proposals")
 def list_proposals(
     status: Optional[str] = None,
@@ -162,36 +182,49 @@ def list_proposals(
     scheme: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Retrieve proposals with beneficiary details and recommended schemes for SCA field dashboard."""
+    """
+    Applications for the SCA officer dashboard. Every value comes from the applicant's confirmed answers,
+    the verified scheme rules or officer actions; nothing is defaulted. Missing values are null.
+    """
     proposals = crud.get_proposals(db, status=status, district=district, scheme=scheme)
     results = []
     for p in proposals:
         b = p.beneficiary
-        ctx = (b.conversation_context or {}) if b else {}
-        multi = ctx.get("multi_schemes", {}) if isinstance(ctx, dict) else {}
+        snap = crud.get_proposal_snapshot(db, p.id)
+        if not snap and b and isinstance(b.conversation_context, dict):
+            # Applications made before snapshots existed: use the conversation only if it is about the same business
+            ctx = b.conversation_context
+            if ctx.get("trade") == p.business_trade:
+                ms = ctx.get("multi_schemes") or {}
+                snap = {"profile": ctx.get("profile"), "available_capital": ctx.get("available_capital"),
+                        "financial_structure": ctx.get("financial_structure"), "pmegp": ms.get("pmegp"),
+                        "mudra": ms.get("mudra")}
 
         # Normalize DPR PDF URL to relative path so it seamlessly opens in any browser/domain
         pdf_url = p.dpr_pdf_url
         if pdf_url and "/static/dprs/" in pdf_url:
-            filename = pdf_url.split("/static/dprs/")[-1]
-            pdf_url = f"/static/dprs/{filename}"
+            pdf_url = f"/static/dprs/{pdf_url.split('/static/dprs/')[-1]}"
 
+        profile = snap.get("profile") or {}
+        district_name = snap.get("district") or (b.district if b else None)
+        cost = float(p.project_cost)
         results.append({
             "id": p.id,
             "beneficiary_id": p.beneficiary_id,
             # Shown exactly as stated by the applicant; missing values stay empty rather than defaulted
-            "beneficiary_name": b.full_name if b else None,
+            "beneficiary_name": profile.get("full_name") or (b.full_name if b else None),
             "whatsapp_number": b.whatsapp_number if b else "",
             "telegram_chat_id": b.telegram_chat_id if b else "",
             "primary_channel": (b.primary_channel if b else None) or "telegram",
-            "preferred_language": b.preferred_language if b else None,
-            "district": b.district if b else None,
-            "state": b.state if b else None,
-            "applicant_profile": ctx.get("profile") if isinstance(ctx, dict) else None,
-            "annual_family_income": float(b.annual_family_income) if (b and b.annual_family_income) else None,
+            "preferred_language": snap.get("language") or (b.preferred_language if b else None),
+            "district": district_name,
+            "state": snap.get("state") or (b.state if b else None),
+            "applicant_profile": profile or None,
+            "available_capital": snap.get("available_capital"),
+            "annual_family_income": profile.get("annual_family_income") or (float(b.annual_family_income) if (b and b.annual_family_income) else None),
             "business_trade": p.business_trade,
             "scheme_tier": p.scheme_tier,
-            "project_cost": float(p.project_cost),
+            "project_cost": cost,
             "sanctioned_loan": float(p.sanctioned_loan),
             "beneficiary_margin": float(p.beneficiary_margin),
             "monthly_emi": float(p.monthly_emi),
@@ -199,9 +232,24 @@ def list_proposals(
             "status": p.status,
             "dpr_pdf_url": pdf_url,
             "created_at": p.created_at.isoformat() if p.created_at else None,
-            "recommended_schemes": multi.get("schemes", []),
-            "capital_advice": multi.get("capital_advice", ""),
-            "primary_scheme_details": multi.get("primary", {}),
+            "details_confirmed_at": snap.get("details_confirmed_at"),
+            "dpr_generated_at": snap.get("dpr_generated_at"),
+            "corporation_loan": snap.get("financial_structure"),
+            "pmegp": snap.get("pmegp"),
+            "mudra": snap.get("mudra"),
+            "reference_cost": _reference_cost(p.business_trade, district_name, cost),
+            "verifications": [
+                {
+                    "field_officer_id": v.field_officer_id,
+                    "geo_latitude": float(v.geo_latitude) if v.geo_latitude is not None else None,
+                    "geo_longitude": float(v.geo_longitude) if v.geo_longitude is not None else None,
+                    "margin_money_verified": bool(v.margin_money_verified),
+                    "recommendation": v.recommendation,
+                    "verified_at": v.verified_at.isoformat() if v.verified_at else None,
+                }
+                for v in sorted(p.verifications, key=lambda v: v.verified_at or 0)
+            ],
+            "officer_log": snap.get("officer_log") or [],
         })
     return results
 
@@ -237,6 +285,13 @@ def sanction_proposal(
     }
 
     crud.record_field_verification(db, verification_data)
+
+    # Keep the officer's remarks with the application (the verification table has no remarks column)
+    from datetime import datetime, timezone
+    log = list(crud.get_proposal_snapshot(db, proposal.id).get("officer_log") or [])
+    log.append({"officer": officer_id, "recommendation": payload.recommendation, "remarks": payload.remarks,
+                "margin_money_verified": payload.margin_money_verified, "at": datetime.now(timezone.utc).isoformat()})
+    crud.save_proposal_snapshot(db, proposal.id, {"officer_log": log})
 
     if payload.recommendation == "APPROVE":
         crud.update_proposal_status(db, proposal_id, "SANCTIONED")

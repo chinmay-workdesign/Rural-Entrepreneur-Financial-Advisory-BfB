@@ -87,3 +87,17 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+
+class ProposalSnapshot(Base):
+    """
+    What the applicant stated and what the scheme rules produced, stored with the application so the officer
+    dashboard keeps it even after the applicant starts a new conversation. Officer remarks are logged here too.
+    """
+    __tablename__ = "proposal_snapshots"
+
+    id = Column(String(36), primary_key=True, default=make_uuid)
+    proposal_id = Column(String(36), ForeignKey("enterprise_proposals.id", ondelete="CASCADE"), nullable=False,
+                         unique=True, index=True)
+    data = Column(JSON, default=dict)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

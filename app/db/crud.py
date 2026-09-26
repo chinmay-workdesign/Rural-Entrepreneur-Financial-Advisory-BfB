@@ -165,3 +165,25 @@ def seed_default_users(db: Session) -> None:
             "is_active": True
         })
 
+
+
+def get_proposal_snapshot(db: Session, proposal_id: str) -> Dict[str, Any]:
+    from app.db.models import ProposalSnapshot
+    row = db.query(ProposalSnapshot).filter(ProposalSnapshot.proposal_id == proposal_id).first()
+    return dict(row.data or {}) if row else {}
+
+
+def save_proposal_snapshot(db: Session, proposal_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+    """Merges `updates` into the application's stored snapshot."""
+    from sqlalchemy.orm.attributes import flag_modified
+    from app.db.models import ProposalSnapshot
+    row = db.query(ProposalSnapshot).filter(ProposalSnapshot.proposal_id == proposal_id).first()
+    if not row:
+        row = ProposalSnapshot(proposal_id=proposal_id, data={})
+        db.add(row)
+    data = dict(row.data or {})
+    data.update(updates)
+    row.data = data
+    flag_modified(row, "data")
+    db.commit()
+    return data

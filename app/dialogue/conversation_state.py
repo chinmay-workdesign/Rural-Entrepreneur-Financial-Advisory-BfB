@@ -1014,8 +1014,26 @@ def _run_advisory(db, beneficiary, context: Dict[str, Any], from_voice: bool = F
         for key, value in proposal_fields.items():
             setattr(existing_p, key, value)
         db.commit()
+        proposal = existing_p
     else:
-        crud.create_proposal(db, {"beneficiary_id": beneficiary.id, "status": "DRAFT", "dpr_pdf_url": None, **proposal_fields})
+        proposal = crud.create_proposal(db, {"beneficiary_id": beneficiary.id, "status": "DRAFT", "dpr_pdf_url": None, **proposal_fields})
+
+    # Keep the confirmed details and scheme results with the application for the officer dashboard
+    from datetime import datetime, timezone
+    crud.save_proposal_snapshot(db, proposal.id, {
+        "profile": profile,
+        "available_capital": available_capital,
+        "trade": trade,
+        "district": district,
+        "state": state,
+        "language": lang,
+        "channel": getattr(beneficiary, "primary_channel", None),
+        "financial_structure": fin_result,
+        "pmegp": multi_schemes.get("pmegp"),
+        "mudra": multi_schemes.get("mudra"),
+        "benchmark_available": benchmark_available,
+        "details_confirmed_at": datetime.now(timezone.utc).isoformat(),
+    })
 
     # 3. Advisory text assembled from the verified results in the user's language
     advisory = generate_advisory_message(
@@ -1105,6 +1123,8 @@ def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
     # Upload to Cloudflare R2 / local fallback
     public_url = upload_dpr_pdf(pdf_bytes, pdf_filename)
     proposal.dpr_pdf_url = public_url
+    from datetime import datetime, timezone
+    crud.save_proposal_snapshot(db, proposal.id, {"dpr_generated_at": datetime.now(timezone.utc).isoformat()})
     beneficiary.conversation_state = "SUBMITTED"
     db.commit()
 
