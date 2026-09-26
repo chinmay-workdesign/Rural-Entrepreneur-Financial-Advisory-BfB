@@ -658,6 +658,17 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
             _send_voice_audio_reply(beneficiary, fallback_ans, lang)
         return
 
+    # 4. Phase 5: Local Authoritative RAG Intent Routing
+    # Check for Factual, Mixed, or Data-Unavailable inquiries before proposal accumulation
+    from app.retrieval.router import classify_query_intent, execute_authoritative_routing, QueryIntent
+    rag_intent, _ = classify_query_intent(text_clean)
+    if rag_intent in [QueryIntent.FACTUAL, QueryIntent.MIXED, QueryIntent.DATA_UNAVAILABLE]:
+        routing_res = execute_authoritative_routing(text_clean, language=lang)
+        send_channel_text(beneficiary, routing_res["answer"])
+        if from_voice:
+            _send_voice_audio_reply(beneficiary, routing_res["answer"], lang)
+        return
+
     # Handle conversation stages
     if state in ["GREETING", "COLLECTING", "ADVISING", "CONFIRM_DPR"]:
         _handle_extraction_and_advisory(db, beneficiary, text_clean, context, from_voice=from_voice)

@@ -67,6 +67,34 @@ def _get_trade_equipment_items(trade: str, total_cost: float) -> list:
             ("Vibration-Damped Foundation, 3-Phase Wiring, DOL Starter & Safety Enclosure", total_cost * 0.15),
             ("Initial Working Capital: Wheat Grain Stock & Commercial Packaging Bags", total_cost * 0.20)
         ]
+    elif any(k in t for k in ["sheep", "goat", "ram", "ewe", "buck", "doe", "ಕುರಿ", "ಮೇಕೆ", "ಆಡು", "भेड़", "बकरी"]):
+        return [
+            ("Purchase of Certified Breeding Stock (Parent Flock with Health Cert)", total_cost * 0.60),
+            ("Protective Shed / Pen Construction (Thatched/GI Roofing & Mesh Enclosure)", total_cost * 0.15),
+            ("Initial Working Capital: Grazing Feeds, Concentrates & Mineral Mixture", total_cost * 0.15),
+            ("Livestock Tagging, Mandatory Vaccination & Livestock Insurance", total_cost * 0.10)
+        ]
+    elif any(k in t for k in ["pig", "piggery", "boar", "sow", "ಹಂದಿ", "सूअर"]):
+        return [
+            ("Pig Sty Construction, Farrowing Pens & Drainage Channels", total_cost * 0.35),
+            ("Purchase of Quality Breeding Animals (Sows and Boar Stock)", total_cost * 0.15),
+            ("Water Supply Installation, Electric Motor Pumpset & Feeding Troughs", total_cost * 0.15),
+            ("Initial Working Capital: High-Protein Feed Stock, Medicines & Insurance", total_cost * 0.35)
+        ]
+    elif any(k in t for k in ["bee", "beekeeping", "apiary", "honey", "ಜೇನು", "मधुमक्खी"]):
+        return [
+            ("Standard Wooden Beehive Boxes with Frames & Colonies (10 Nos.)", total_cost * 0.65),
+            ("Stainless Steel Centrifugal Honey Extractor & Processing Vessel", total_cost * 0.08),
+            ("Protective Gear: Bee Veils, Smokers, Hive Tooling Kits & Comb Foundation Wax", total_cost * 0.10),
+            ("Initial Working Capital: Seasonal Sugar Supplement Feed, Medicines & Maintenance", total_cost * 0.17)
+        ]
+    elif any(k in t for k in ["sericulture", "mulberry", "silk", "ರೇಷ್ಮೆ", "रेशम"]):
+        return [
+            ("Mulberry Garden Land Preparation, Trenching & Farmyard Manuring", total_cost * 0.25),
+            ("Certified High-Yielding Mulberry Saplings (V1/G4) & Plantation Labor", total_cost * 0.35),
+            ("Water-Saving Drip Irrigation / Sprinkler System Installation", total_cost * 0.25),
+            ("Initial Cultivation Working Capital: Fertilizers, Biopesticides & Pruning Tools", total_cost * 0.15)
+        ]
     elif any(k in t for k in ["weave", "handloom", "powerloom", "loom", "ಮಗ್ಗ"]):
         return [
             ("Semi-Automatic Frame Loom with Electronic Jacquard Attachment", total_cost * 0.50),
@@ -364,16 +392,122 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
     story.append(s_table)
     story.append(Spacer(1, 6))
 
-    # 7. NABARD Benchmark Summary
-    story.append(Paragraph("7. NABARD District Economic Feasibility Reference", heading2_style))
-    nabard_text = (
-        f"This enterprise proposal for <b>{trade_name}</b> in <b>{district_name}</b> has been cross-referenced with "
-        f"NABARD unit cost benchmarks for rural micro-enterprises. With a projected average DSCR exceeding 1.70, "
-        f"the proposed unit demonstrates strong repayment capacity, sustainable cash flows, and full compliance with "
-        f"RBI Priority Sector Lending (PSL) micro-credit guidelines."
-    )
-    story.append(Paragraph(nabard_text, cell_style))
-    story.append(Spacer(1, 8))
+    # 7. Source & Data Provenance (Statutory Benchmarks & Derived Calculations)
+    from app.finance.repository import benchmark_repository
+    from app.finance.deviation import analyze_benchmark_deviation
+
+    bench = benchmark_repository.get_benchmark(trade_name, district=district_name)
+    dev_analysis = analyze_benchmark_deviation(cost, trade_name, district=district_name)
+
+    story.append(Paragraph("7. Source & Data Provenance (Statutory Benchmarks & Derived Calculations)", heading2_style))
+
+    # Provenance Table
+    prov_headers = [
+        Paragraph("<b>Parameter</b>", white_header_style),
+        Paragraph("<b>Value</b>", white_header_style),
+        Paragraph("<b>Source Document / Authority</b>", white_header_style),
+        Paragraph("<b>Page</b>", white_header_style),
+        Paragraph("<b>Year</b>", white_header_style),
+        Paragraph("<b>Type</b>", white_header_style),
+    ]
+
+    prov_rows = [prov_headers]
+
+    # Row 1: Proposed Project Cost
+    prov_rows.append([
+        Paragraph("Proposed Project Cost", cell_style),
+        Paragraph(f"₹{cost:,.2f}", bold_cell_style),
+        Paragraph("Applicant Proposal / Verified Outlay", cell_style),
+        Paragraph("—", cell_style),
+        Paragraph("Current", cell_style),
+        Paragraph("User Input", cell_style),
+    ])
+
+    # Row 2: Reference Benchmark
+    if dev_analysis.get("has_benchmark"):
+        ref_c = dev_analysis["reference_cost"]
+        s_org = dev_analysis.get("source_organization", "Official Benchmark")
+        s_pg = str(dev_analysis.get("source_page") or "—")
+        s_yr = str(dev_analysis.get("publication_year") or "—")
+        s_type = dev_analysis.get("source_type", "BENCHMARK")
+        prov_rows.append([
+            Paragraph("Reference Benchmark Cost", cell_style),
+            Paragraph(f"₹{ref_c:,.2f}", bold_cell_style),
+            Paragraph(s_org[:38], cell_style),
+            Paragraph(s_pg, cell_style),
+            Paragraph(s_yr, cell_style),
+            Paragraph(s_type.replace("_", " "), cell_style),
+        ])
+    else:
+        prov_rows.append([
+            Paragraph("Reference Benchmark Cost", cell_style),
+            Paragraph("DATA_NOT_AVAILABLE", bold_cell_style),
+            Paragraph("No official government source in repo", cell_style),
+            Paragraph("—", cell_style),
+            Paragraph("—", cell_style),
+            Paragraph("Future Scope", cell_style),
+        ])
+
+    # Row 3: Concessional Loan
+    prov_rows.append([
+        Paragraph("Concessional Loan Outlay", cell_style),
+        Paragraph(f"₹{loan:,.2f}", bold_cell_style),
+        Paragraph("Deterministic Financial Engine", cell_style),
+        Paragraph("—", cell_style),
+        Paragraph("Current", cell_style),
+        Paragraph("Derived Math", cell_style),
+    ])
+
+    # Row 4: Monthly Installment EMI
+    prov_rows.append([
+        Paragraph("Monthly Installment (EMI)", cell_style),
+        Paragraph(f"₹{emi:,.2f}", bold_cell_style),
+        Paragraph("Reducing-Balance Annuity Formula", cell_style),
+        Paragraph("—", cell_style),
+        Paragraph("Current", cell_style),
+        Paragraph("Derived Math", cell_style),
+    ])
+
+    # Row 5: DSCR Viability
+    prov_rows.append([
+        Paragraph("Base DSCR Coverage", cell_style),
+        Paragraph(f"{dscr:.2f}", bold_cell_style),
+        Paragraph("Deterministic Operating Cash Flows", cell_style),
+        Paragraph("—", cell_style),
+        Paragraph("Current", cell_style),
+        Paragraph("Derived Math", cell_style),
+    ])
+
+    # Row 6: PMEGP Subsidy Norm
+    prov_rows.append([
+        Paragraph("PMEGP Capital Subsidy Norm", cell_style),
+        Paragraph("35.0% (Rural Special)", bold_cell_style),
+        Paragraph("Ministry of MSME PMEGP Guidelines", cell_style),
+        Paragraph("4", cell_style),
+        Paragraph("2023", cell_style),
+        Paragraph("Scheme Rule", cell_style),
+    ])
+
+    prov_table = Table(prov_rows, colWidths=[120, 80, 180, 35, 45, 75])
+    prov_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2b6cb0")),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    story.append(prov_table)
+    story.append(Spacer(1, 3))
+
+    # Historical Warning Note if applicable
+    if dev_analysis.get("cost_nature_note"):
+        story.append(Paragraph(f"<b>Notice:</b> {dev_analysis['cost_nature_note']}", cell_style))
+        story.append(Spacer(1, 3))
+    elif dev_analysis.get("has_benchmark") and dev_analysis.get("is_significant_deviation"):
+        story.append(Paragraph(f"<b>Benchmark Deviation Advisory:</b> {dev_analysis['advisory']}", cell_style))
+        story.append(Spacer(1, 3))
+    else:
+        story.append(Spacer(1, 3))
+
 
     # 8. Field Verification & Signatures Box
     story.append(Paragraph("8. SCA Field Verification & Bank Concurrence", heading2_style))

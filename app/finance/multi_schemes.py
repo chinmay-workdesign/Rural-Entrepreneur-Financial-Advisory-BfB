@@ -124,6 +124,12 @@ def get_all_eligible_schemes(
         "margin_pct": mudra_margin_pct,
         "interest_rate": f"{mudra_rate} p.a.",
         "tenure": "36 to 60 months",
+        "source_id": "PMMY_PARTNER_ELIGIBILITY",
+        "source_organization": "Micro Units Development & Refinance Agency (MUDRA)",
+        "source_page": None,
+        "verification_status": "NEEDS_SOURCE_VERIFICATION",
+        "source_type": "UNVERIFIED_POLICY_GUIDELINE",
+        "provenance_note": "Borrower loan tiers (Shishu/Kishore/Tarun) reflect standard banking practice; awaiting formal Ministry circular in repository.",
         "highlights": "No collateral or third-party guarantor required. Covered under CGFMU government credit guarantee. Includes MUDRA RuPay Card.",
         "how_to_redeem": [
             "Apply online through the government JanSamarth Portal (www.jansamarth.in) or UdyamiMitra Portal (www.udyamimitra.in).",
@@ -133,11 +139,11 @@ def get_all_eligible_schemes(
         ]
     }
 
-    # 3. PMEGP (KVIC/KVIB/DIC) Subsidy Scheme
-    rural_subsidy_pct = 35  # Special category (SC/ST/OBC/Women/Minority) in rural areas
-    general_subsidy_pct = 25 # General category in rural areas
+    # 3. PMEGP (KVIC/KVIB/DIC) Subsidy Scheme - Grounded in PMEGP Revised Guidelines 2023
+    rural_subsidy_pct = 35.0  # Special category (SC/ST/OBC/Women/Minority) in rural areas (Page 4, Para 3.2)
+    general_subsidy_pct = 25.0 # General category in rural areas (Page 4, Para 3.2)
     subsidy_amount = cost * (rural_subsidy_pct / 100.0)
-    pmegp_own_contribution = cost * 0.05 # Special category only contributes 5%
+    pmegp_own_contribution = cost * 0.05 # Special category only contributes 5% (Page 4, Para 3.2)
     pmegp_bank_loan = cost - subsidy_amount - pmegp_own_contribution
 
     pmegp_scheme = {
@@ -150,9 +156,17 @@ def get_all_eligible_schemes(
         "own_contribution": pmegp_own_contribution,
         "own_contribution_pct": 5,
         "bank_loan": pmegp_bank_loan,
+        "max_project_cost_mfg": 5000000.0,
+        "max_project_cost_service": 2000000.0,
         "interest_rate": "Normal bank interest (approx 9% - 10.5% p.a.)",
-        "tenure": "60 to 84 months",
-        "highlights": f"Highest government grant available: {rural_subsidy_pct}% direct subsidy (₹{subsidy_amount:,.2f}) credited to your account! You only need 5% own savings (₹{pmegp_own_contribution:,.2f}).",
+        "tenure": "36 to 84 months",
+        "source_id": "PMEGP_REVISED_GUIDELINES_2023",
+        "source_organization": "Ministry of MSME, Government of India",
+        "source_page": 4,
+        "publication_year": 2023,
+        "verification_status": "VERIFIED_OFFICIAL",
+        "source_type": "GOVERNMENT_SCHEME_RULE",
+        "highlights": f"Highest government grant available: {rural_subsidy_pct:.0f}% direct subsidy (₹{subsidy_amount:,.2f}) credited to your account! You only need 5% own savings (₹{pmegp_own_contribution:,.2f}).",
         "how_to_redeem": [
             "Register online on the KVIC PMEGP portal: www.kviconline.gov.in.",
             "Upload DPR (generated here), Aadhaar card, Caste/Category Certificate, and Rural Area certificate from your Gram Panchayat.",

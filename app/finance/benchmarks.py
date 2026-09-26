@@ -71,31 +71,12 @@ NABARD_BENCHMARKS: List[Dict[str, Any]] = [
     },
 ]
 
-def get_trade_benchmark(trade: str, district: str = "Rural District") -> Dict[str, Any]:
+def get_trade_benchmark(trade: str, district: str = "Rural District", real_data_only: Optional[bool] = None) -> Dict[str, Any]:
     """
-    Match entrepreneur's trade to NABARD standard bankable model.
-    Returns matched benchmark or standard conservative rural benchmark.
+    Match entrepreneur's trade to authoritative benchmark repository.
+    Routes to NABARD unit costs, institutional model profiles, or explicit synthetic fallback.
+    Under REAL_DATA_ONLY=True, never falls back to synthetic data for missing categories.
     """
-    trade_lower = trade.lower()
-    for item in NABARD_BENCHMARKS:
-        if any(kw in trade_lower for kw in item["keywords"]):
-            return {
-                "trade": item["trade"],
-                "district": district,
-                "capex": item["capex"],
-                "opex": item["opex"],
-                "dscr": item["dscr"],
-                "description": item["description"],
-                "summary": f"Grounded in NABARD {item['trade']} benchmark: typical capex ₹{item['capex']:,.0f}, opex ₹{item['opex']:,.0f}."
-            }
+    from app.finance.repository import benchmark_repository
+    return benchmark_repository.get_benchmark(trade, district=district, real_data_only=real_data_only)
 
-    # Conservative default
-    return {
-        "trade": trade,
-        "district": district,
-        "capex": 100000.0,
-        "opex": 30000.0,
-        "dscr": 1.75,
-        "description": f"Standard rural micro-enterprise profile for {trade}.",
-        "summary": f"Grounded in standard rural lending norms in {district}."
-    }

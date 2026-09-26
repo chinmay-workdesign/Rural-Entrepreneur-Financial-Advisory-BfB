@@ -257,21 +257,56 @@
     </tr>
 </table>
 
-<h2>5. NABARD Benchmark Grounding</h2>
+<h2>5. Source & Data Provenance (Statutory Benchmarks & Derived Calculations)</h2>
 <table>
     <tr>
-        <th width="30%">Benchmark Source</th>
-        <td>NABARD Model Bankable Project Guidelines & District Resource Profiles</td>
+        <th>Parameter</th>
+        <th>Value</th>
+        <th>Source Authority / Document</th>
+        <th>Page</th>
+        <th>Type</th>
     </tr>
     <tr>
-        <th>District Viability</th>
-        <td>Grounded in unit costs for <strong>{{ beneficiary.district }}</strong> district agro-climatic zone.</td>
+        <td>Proposed Project Cost</td>
+        <td><strong>₹{{ "%.2f"|format(proposal.project_cost) }}</strong></td>
+        <td>Applicant Proposal / Verified Outlay</td>
+        <td>—</td>
+        <td>User Input</td>
     </tr>
     <tr>
-        <th>Economic Feasibility</th>
-        <td>Projected operating cash flows provide sufficient headroom exceeding mandatory 1.25 DSCR debt coverage.</td>
+        <td>Concessional Primary Loan</td>
+        <td><strong>₹{{ "%.2f"|format(proposal.sanctioned_loan) }}</strong></td>
+        <td>Deterministic Financial Engine (SCA Policy)</td>
+        <td>—</td>
+        <td>Derived Calculation</td>
+    </tr>
+    <tr>
+        <td>Monthly Installment (EMI)</td>
+        <td><strong>₹{{ "%.2f"|format(proposal.monthly_emi) }}</strong></td>
+        <td>Reducing-Balance Annuity Formula</td>
+        <td>—</td>
+        <td>Derived Calculation</td>
+    </tr>
+    <tr>
+        <td>Base DSCR Debt Coverage</td>
+        <td><strong>{{ "%.2f"|format(proposal.projected_dscr) }}</strong></td>
+        <td>Deterministic Cash Flow Projection</td>
+        <td>—</td>
+        <td>Derived Calculation</td>
+    </tr>
+    <tr>
+        <td>PMEGP Capital Subsidy Norm</td>
+        <td><strong>35.0% (Rural Special)</strong></td>
+        <td>Ministry of MSME PMEGP Guidelines (2023)</td>
+        <td>4</td>
+        <td>Scheme Rule</td>
     </tr>
 </table>
+{% if "flour" in (proposal.business_trade|lower) %}
+<div style="background-color: #fffaf0; border-left: 3px solid #dd6b20; padding: 6px 10px; margin-bottom: 12px; font-size: 8.5pt;">
+    <strong>Notice:</strong> For Mini Flour Mill, the reference model is grounded in Project SAMADHAN Pre-Feasibility Report (2020, Page 5). This reflects historical 2020 equipment and material price levels and should not be interpreted as a current spot market quotation.
+</div>
+{% endif %}
 
 <div class="verification-box">
     <strong>6. State Channelizing Agency (SCA) Field Verification</strong>

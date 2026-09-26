@@ -19,11 +19,17 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: Optional[str] = None
 
+    # Vector Retrieval (Local Qdrant + FastEmbed)
+    QDRANT_URL: Optional[str] = None  # None uses local on-disk embedded Qdrant; "http://localhost:6333" uses Docker
+    QDRANT_COLLECTION: str = "authoritative_knowledge"
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+
     # General
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
     BACKEND_INTERNAL_URL: str = "http://localhost:8000"
     AUTH_SECRET_KEY: str = "sca_rural_enterprise_advisor_secret_key_2026_secure"
+    REAL_DATA_ONLY: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

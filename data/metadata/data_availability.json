@@ -1,0 +1,139 @@
+{
+  "matrix_version": "1.0.0",
+  "updated_at": "2026-09-25T16:55:00+05:30",
+  "description": "Authoritative real-data coverage matrix for rural enterprise categories in India",
+  "activities": {
+    "dairy": {
+      "activity_name": "Dairy Farming",
+      "status": "VERIFIED",
+      "source_type": "NABARD_UNIT_COST",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "issuing_authority": "NABARD Karnataka Regional Office",
+      "publication_year": 2026,
+      "source_pages": [41],
+      "geographic_scope": "State (Karnataka)",
+      "future_scope": false,
+      "notes": "Verified model unit cost for 2 crossbred cows (HF & Jersey) approved by SLUCC."
+    },
+    "poultry": {
+      "activity_name": "Poultry Farming (Broiler)",
+      "status": "VERIFIED",
+      "source_type": "NABARD_UNIT_COST",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "issuing_authority": "NABARD Karnataka Regional Office",
+      "publication_year": 2026,
+      "source_pages": [49, 50],
+      "geographic_scope": "State (Karnataka)",
+      "future_scope": false,
+      "notes": "Verified unit costs for Broiler 2000 Integration and Commercial 5000 birds."
+    },
+    "mini_flour_mill": {
+      "activity_name": "Mini Flour Mill",
+      "status": "VERIFIED",
+      "source_type": "MODEL_PROJECT_PROFILE",
+      "source_id": "SAMADHAN_FLOUR_MILL_PROJECT_PROFILE",
+      "issuing_authority": "Project SAMADHAN / Multi Disciplinary Training Centre (MDTC)",
+      "publication_year": 2020,
+      "source_pages": [4, 5, 6, 7, 8],
+      "geographic_scope": "National",
+      "future_scope": false,
+      "notes": "Model pre-feasibility report for 2400 MT/year commercial flour mill. Total project cost Rs 32.93 Lakhs."
+    },
+    "sheep_rearing": {
+      "activity_name": "Sheep Rearing",
+      "status": "VERIFIED",
+      "source_type": "NABARD_UNIT_COST",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "issuing_authority": "NABARD Karnataka Regional Office",
+      "publication_year": 2026,
+      "source_pages": [55, 56],
+      "geographic_scope": "State (Karnataka)",
+      "future_scope": false,
+      "notes": "Verified unit cost for Bannur and Local breed 10+1 rearing units (₹1.11 lakh & ₹0.98 lakh)."
+    },
+    "goat_rearing": {
+      "activity_name": "Goat Rearing",
+      "status": "VERIFIED",
+      "source_type": "NABARD_UNIT_COST",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "issuing_authority": "NABARD Karnataka Regional Office",
+      "publication_year": 2026,
+      "source_pages": [60],
+      "geographic_scope": "State (Karnataka)",
+      "future_scope": false,
+      "notes": "Verified unit cost for Improved and Local breed 10+1 rearing units (₹1.13 lakh & ₹0.95 lakh)."
+    },
+    "piggery": {
+      "activity_name": "Piggery Farming",
+      "status": "VERIFIED",
+      "source_type": "NABARD_UNIT_COST",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "issuing_authority": "NABARD Karnataka Regional Office",
+      "publication_year": 2026,
+      "source_pages": [64],
+      "geographic_scope": "State (Karnataka)",
+      "future_scope": false,
+      "notes": "Verified unit cost for 3+1 rearing cum fattening unit (₹1.64 lakh)."
+    },
+    "fisheries": {
+      "activity_name": "Fisheries and Aquaculture",
+      "status": "VERIFIED",
+      "source_type": "NABARD_UNIT_COST",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "issuing_authority": "NABARD Karnataka Regional Office",
+      "publication_year": 2026,
+      "source_pages": [68],
+      "geographic_scope": "State (Karnataka)",
+      "future_scope": false,
+      "notes": "Verified unit cost for 1 ha composite freshwater fish culture (₹8.29 lakh)."
+    },
+    "beekeeping": {
+      "activity_name": "Beekeeping / Apiary",
+      "status": "VERIFIED",
+      "source_type": "NABARD_UNIT_COST",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "issuing_authority": "NABARD Karnataka Regional Office",
+      "publication_year": 2026,
+      "source_pages": [30],
+      "geographic_scope": "State (Karnataka)",
+      "future_scope": false,
+      "notes": "Verified unit cost for 10 colony apiary unit with extraction equipment (₹62,800)."
+    },
+    "sericulture": {
+      "activity_name": "Sericulture",
+      "status": "VERIFIED",
+      "source_type": "NABARD_UNIT_COST",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "issuing_authority": "NABARD Karnataka Regional Office",
+      "publication_year": 2026,
+      "source_pages": [34],
+      "geographic_scope": "State (Karnataka)",
+      "future_scope": false,
+      "notes": "Verified unit cost for 1 hectare mulberry garden establishment (₹2.25 lakh)."
+    },
+    "tailoring": {
+      "activity_name": "Tailoring & Garment Stitching Shop",
+      "status": "DATA_NOT_AVAILABLE",
+      "source_type": null,
+      "source_id": null,
+      "issuing_authority": null,
+      "publication_year": null,
+      "source_pages": [],
+      "geographic_scope": null,
+      "future_scope": true,
+      "notes": "Absent from NABARD agricultural booklet. Requires official KVIC / PMEGP model project profile."
+    },
+    "kirana": {
+      "activity_name": "Kirana Stall / Village Grocery Store",
+      "status": "DATA_NOT_AVAILABLE",
+      "source_type": null,
+      "source_id": null,
+      "issuing_authority": null,
+      "publication_year": null,
+      "source_pages": [],
+      "geographic_scope": null,
+      "future_scope": true,
+      "notes": "Absent from NABARD agricultural booklet. Retail trade guidelines under PMMY/PMEGP required."
+    }
+  }
+}

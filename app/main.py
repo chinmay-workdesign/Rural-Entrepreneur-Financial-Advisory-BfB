@@ -36,6 +36,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not seed default users: {e}")
 
+    # Explicit startup check for authoritative Qdrant collection (Never rebuild on user request)
+    try:
+        from app.retrieval.service import retrieval_service
+        if retrieval_service.verify_collection_ready(auto_build_if_empty=False):
+            logger.info("Authoritative Qdrant knowledge collection verified ready.")
+        else:
+            logger.warning("Authoritative Qdrant collection not found. Execute 'py -m app.retrieval.ingest' to initialize.")
+    except Exception as e:
+        logger.warning(f"Could not verify Qdrant collection during startup: {e}")
+
     # If configured for unified cloud deployment, run Telegram bot polling in background thread
     should_run_bot = (
         bool(settings.TELEGRAM_BOT_TOKEN)

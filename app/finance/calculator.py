@@ -16,14 +16,20 @@ def validate_project_cost(project_cost: float) -> None:
     if project_cost > TLS_MAX_COST:
         raise ValueError(f"Project cost of ₹{project_cost:,.2f} exceeds Term Loan Scheme maximum ceiling of ₹{TLS_MAX_COST:,.2f}.")
 
-def calculate_financial_structure(project_cost: float) -> Dict[str, Any]:
+def calculate_financial_structure(
+    project_cost: float,
+    source_provenance: Any = None
+) -> Dict[str, Any]:
     """
     Deterministic financial structure calculation for rural micro-enterprises.
     Implements Micro Finance Scheme (MFS) and Term Loan Scheme (TLS).
 
     Never delegates arithmetic to LLMs.
     Guarantees that margin money dynamically absorbs caps so loan + margin == cost.
+    Attaches structured financial evidence separating source parameters from derived math.
     """
+    from app.finance.provenance import ProvenanceRecord, FinancialEvidence
+
     validate_project_cost(project_cost)
     cost = float(project_cost)
 
@@ -47,6 +53,77 @@ def calculate_financial_structure(project_cost: float) -> Dict[str, Any]:
         math.pow(1 + monthly_r, repay_mos) - 1
     )
 
+    # Build Structured Evidence
+    source_records = []
+    if source_provenance and isinstance(source_provenance, ProvenanceRecord):
+        source_records.append(source_provenance)
+    else:
+        source_records.append(ProvenanceRecord(
+            parameter="project_cost",
+            value=round(cost, 2),
+            unit="INR",
+            source_id="USER_PROPOSAL",
+            source_organization="Applicant Proposal",
+            verification_status="USER_INPUT",
+            source_type="USER_INPUT",
+            notes="Project outlay stated by applicant"
+        ))
+
+    source_records.append(ProvenanceRecord(
+        parameter="interest_rate",
+        value=round(rate * 100, 2),
+        unit="PERCENT",
+        source_id="SCA_CONCESSIONAL_POLICY",
+        source_organization="State Channelizing Agency",
+        verification_status="BASELINE_POLICY",
+        source_type="APPLICATION_ASSUMPTION",
+        notes=f"Concessional reducing balance rate for {scheme_name}"
+    ))
+
+    derived_records = [
+        ProvenanceRecord(
+            parameter="loan_amount",
+            value=round(loan, 2),
+            unit="INR",
+            verification_status="DERIVED",
+            source_type="DERIVED_MATHEMATICAL",
+            derived_from=["project_cost", "max_loan_cap"],
+            notes="90% of project cost subject to statutory scheme ceiling"
+        ),
+        ProvenanceRecord(
+            parameter="beneficiary_margin",
+            value=round(margin, 2),
+            unit="INR",
+            verification_status="DERIVED",
+            source_type="DERIVED_MATHEMATICAL",
+            derived_from=["project_cost", "loan_amount"],
+            notes="Equity contribution absorbing loan ceiling"
+        ),
+        ProvenanceRecord(
+            parameter="monthly_emi",
+            value=round(emi, 2),
+            unit="INR",
+            verification_status="DERIVED",
+            source_type="DERIVED_MATHEMATICAL",
+            derived_from=["loan_amount", "interest_rate", "repayment_months"],
+            notes="Standard reducing-balance amortization annuity"
+        ),
+        ProvenanceRecord(
+            parameter="total_interest",
+            value=round((emi * repay_mos) - loan, 2),
+            unit="INR",
+            verification_status="DERIVED",
+            source_type="DERIVED_MATHEMATICAL",
+            derived_from=["monthly_emi", "repayment_months", "loan_amount"],
+            notes="Cumulative interest paid over active repayment tenure"
+        )
+    ]
+
+    evidence = FinancialEvidence(
+        source_records=source_records,
+        derived_records=derived_records
+    )
+
     return {
         "scheme": scheme,
         "scheme_name": scheme_name,
@@ -60,5 +137,8 @@ def calculate_financial_structure(project_cost: float) -> Dict[str, Any]:
         "repayment_months": repay_mos,
         "emi": round(emi, 2),
         "total_interest": round((emi * repay_mos) - loan, 2),
-        "total_repayable": round(emi * repay_mos, 2)
+        "total_repayable": round(emi * repay_mos, 2),
+        "evidence": evidence.model_dump(),
+        "provenance_table": evidence.to_provenance_table()
     }
+

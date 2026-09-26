@@ -5,11 +5,27 @@
 [![Telegram](https://img.shields.io/badge/Telegram-Bot%20API-0088cc.svg)](https://core.telegram.org/bots/api)
 [![WhatsApp](https://img.shields.io/badge/WhatsApp-Cloud%20API-25D366.svg)](https://developers.facebook.com/docs/whatsapp/cloud-api)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Test%20Suite-24%20Passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Test%20Suite-88%20Passed-brightgreen.svg)]()
 
 A production-ready, **100% zero-cost-tier** conversational AI advisory and financial structuring platform designed to bridge the formal credit gap for hyper-local business owners and rural micro-entrepreneurs across India.
 
 The platform operates natively on **Telegram** and **Meta WhatsApp Cloud API** (supporting spoken voice notes and text in **Kannada, Hindi, Telugu, Marathi, and English**). It deterministically structures subsidized government credit schemes, validates financial feasibility against **NABARD unit-cost benchmarks**, compiles bank-ready **Detailed Project Report (DPR)** PDFs with 5-year cash-flow and DSCR projections, and provides State Channelizing Agency (SCA) field officers with a real-time geo-verification and loan sanction console.
+
+## 📊 Real-Data Governance & Migration Status
+
+The project is actively executing the **Real-Data Migration** from synthetic/mock baselines to authoritative Government of India and NABARD publications. The current state is strictly documented below:
+
+### Status Breakdown
+
+| Component | Status | Source & Scope | Notes |
+|---|---|---|---|
+| **NABARD Unit Costs (8 Allied Activities)** | **`IMPLEMENTED`** | NABARD Karnataka RO Booklet 2026-27 | Extracted and verified 12 SLUCC model benchmarks: 2-Cow Dairy (₹2.29L/₹2.05L), Poultry Broiler (₹4.56L/₹20.80L), Sheep Rearing (₹1.11L/₹0.98L), Goat Rearing (₹1.13L/₹0.95L), Piggery (₹1.64L), Inland Fisheries (₹8.29L), Beekeeping (₹62.8K), and Sericulture (₹2.25L). |
+| **Non-Farm Model Project Profile (Flour Mill)** | **`IMPLEMENTED`** | Project SAMADHAN / MDTC (2020) | Model pre-feasibility profile for commercial flour mill (2400 MT/yr, ₹32.93L total project cost, 12 employees). Stored with historical benchmark year 2020. |
+| **PMEGP Scheme Policy Rules** | **`IMPLEMENTED`** | MoMSME Guidelines (2023) | Extracted official ₹50L/₹20L ceilings, 35%/25% rural margin money subsidies, own equity requirements, age ≥ 18, and Udyam mandates. |
+| **AIDIS Aggregate Credit Survey** | **`IMPLEMENTED`** | NSO NSS 77th Round Report No. 588 | Aggregate Karnataka and All-India rural credit statistics (State IOI 48.1%, National IOI 35.0%, 66.1% institutional debt share, AOD ₹59,748, DAR 3.8%). |
+| **PMMY / MUDRA Borrower Rules** | **`PARTIALLY IMPLEMENTED`** | MUDRA Partner Eligibility (`NEEDS_SOURCE_VERIFICATION`) | Document covers partner-bank refinance eligibility; end-borrower product tiers (Shishu/Kishore/Tarun) require official Ministry circular. |
+| **Non-Farm Benchmarks (Tailoring & Kirana)** | **`FUTURE SCOPE`** | `DATA_NOT_AVAILABLE` | Absent from NABARD agricultural booklet. Synthetic fallback is strictly disabled under `REAL_DATA_ONLY=True`. |
+| **Vector DB (Qdrant) & FastEmbed Local RAG Layer** | **`IMPLEMENTED`** | Local Qdrant + FastEmbed BAAI/bge-small-en-v1.5 | Provenance-aware authoritative retrieval with 20 structured chunks, 23-query regression evaluation, and zero external RAG SaaS dependencies. |
 
 ---
 
@@ -18,6 +34,7 @@ The platform operates natively on **Telegram** and **Meta WhatsApp Cloud API** (
   - [The Rural Credit Problem](#the-rural-credit-problem)
   - [The AI Advisory Solution](#the-ai-advisory-solution)
   - [Key Platform Capabilities](#key-platform-capabilities)
+- [Real-Data Governance & Migration Status](#-real-data-governance--migration-status)
 - [System Architecture & Data Flow](#-system-architecture--data-flow)
 - [Technical Approach & Core Methodologies](#-technical-approach--core-methodologies)
   - [1. Deterministic Financial Math vs. Probabilistic LLM](#1-deterministic-financial-math-vs-probabilistic-llm)
