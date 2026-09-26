@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     QDRANT_URL: Optional[str] = None  # None uses local on-disk embedded Qdrant; "http://localhost:6333" uses Docker
     QDRANT_COLLECTION: str = "authoritative_knowledge"
     EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    # Build the collection at startup when it is missing or empty (fresh clones / ephemeral deploys)
+    QDRANT_AUTO_INGEST: bool = True
 
     # General
     ENVIRONMENT: str = "development"

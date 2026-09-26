@@ -36,13 +36,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not seed default users: {e}")
 
-    # Explicit startup check for authoritative Qdrant collection (Never rebuild on user request)
+    # Explicit startup check for authoritative Qdrant collection (built only at startup when missing/empty, never on user request)
     try:
         from app.retrieval.service import retrieval_service
-        if retrieval_service.verify_collection_ready(auto_build_if_empty=False):
+        if retrieval_service.verify_collection_ready(auto_build_if_empty=settings.QDRANT_AUTO_INGEST):
             logger.info("Authoritative Qdrant knowledge collection verified ready.")
         else:
-            logger.warning("Authoritative Qdrant collection not found. Execute 'py -m app.retrieval.ingest' to initialize.")
+            logger.warning("Authoritative Qdrant collection missing or empty. Execute 'py -m app.retrieval.ingest' to initialize.")
     except Exception as e:
         logger.warning(f"Could not verify Qdrant collection during startup: {e}")
 
