@@ -82,14 +82,25 @@ def test_kirana_returns_data_not_available():
 
 # 8. PMEGP uses only verified extracted rules
 def test_pmegp_uses_only_verified_extracted_rules():
-    schemes = get_all_eligible_schemes(cost=200000.0, district="Belagavi")
+    profile = {"gender": "female", "social_category": "obc", "area_type": "rural", "age": 34}
+    schemes = get_all_eligible_schemes(cost=200000.0, trade="Dairy", district="Belagavi", profile=profile)
     pmegp = schemes["pmegp"]
     assert pmegp["verification_status"] == "VERIFIED_OFFICIAL"
     assert pmegp["source_id"] == "PMEGP_REVISED_GUIDELINES_2023"
     assert pmegp["source_page"] == 4
+    assert pmegp["eligible"] is True
     assert pmegp["subsidy_pct"] == 35.0
+    assert pmegp["subsidy_amount"] == 70000.0
     assert pmegp["own_contribution_pct"] == 5
-    assert pmegp["bank_loan"] == 200000.0 - (200000.0 * 0.35) - (200000.0 * 0.05)
+    assert pmegp["bank_loan_pct"] == 95.0
+    assert pmegp["bank_loan"] == 190000.0
+
+
+def test_pmegp_without_profile_shows_no_subsidy_figure():
+    pmegp = get_all_eligible_schemes(cost=200000.0, trade="Dairy", district="Belagavi")["pmegp"]
+    assert pmegp["eligible"] is None
+    assert pmegp["subsidy_pct"] is None
+    assert pmegp["subsidy_amount"] is None
 
 # 9. PMMY unverified values cannot enter authoritative calculations
 def test_pmmy_unverified_values_cannot_enter_authoritative_calculations():

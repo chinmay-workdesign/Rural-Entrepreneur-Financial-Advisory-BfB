@@ -18,6 +18,7 @@ from app.db import crud
 from app.db.session import SessionLocal
 from app.dialogue.conversation_state import NO_BENCHMARK_NOTICE, process_user_query
 from app.dpr.generator import generate_dpr_pdf
+from tests.intake_helpers import complete_intake
 
 
 def _new_phone() -> str:
@@ -29,6 +30,13 @@ def _run(phone: str, text: str) -> list:
     with patch("app.dialogue.conversation_state.send_channel_text") as sent:
         process_user_query(phone, text)
     return [c.args[1] for c in sent.call_args_list]
+
+
+def _run_to_advice(phone: str, text: str) -> list:
+    """Opening message plus the intake answers and confirmation; returns every message sent."""
+    messages = _run(phone, text)
+    complete_intake(lambda t: messages.extend(_run(phone, t)), lambda db: crud.get_or_create_beneficiary(db, phone))
+    return messages
 
 
 def _has_notice(messages: list) -> bool:
@@ -44,7 +52,7 @@ def test_real_data_only_defaults_to_true(monkeypatch):
 # 2. No official benchmark: loan maths kept, DSCR omitted, notice appended
 def test_no_benchmark_trade_gets_loan_maths_without_dscr():
     phone = _new_phone()
-    messages = _run(phone, "I want to start a kirana stall in Belagavi with ₹1,20,000")
+    messages = _run_to_advice(phone, "I want to start a kirana stall in Belagavi with ₹1,20,000")
 
     db = SessionLocal()
     try:
@@ -67,7 +75,7 @@ def test_no_benchmark_trade_gets_loan_maths_without_dscr():
 # 3. Verified NABARD trade: DSCR present, no notice
 def test_verified_trade_keeps_dscr_and_has_no_notice():
     phone = _new_phone()
-    messages = _run(phone, "I want to start a dairy with 2 cows in Dharwad with ₹2,29,000")
+    messages = _run_to_advice(phone, "I want to start a dairy with 2 cows in Dharwad with ₹2,29,000")
 
     db = SessionLocal()
     try:

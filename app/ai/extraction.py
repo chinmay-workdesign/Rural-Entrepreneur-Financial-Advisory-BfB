@@ -4,6 +4,7 @@ import logging
 from typing import Dict, Any, Optional
 from .llm_client import call_llm_chat
 from app.finance.multi_schemes import get_all_eligible_schemes
+from app.ai.pmegp_text import format_pmegp_block
 
 logger = logging.getLogger("ai_extraction")
 
@@ -71,7 +72,7 @@ def fallback_regex_extractor(text: str) -> Dict[str, Any]:
 
     trade = None
     lower_t = text.lower()
-    if any(w in lower_t for w in ["kirana", "grocery", "provision", "store", "stall", "shop", "కిరాణా", "किराणा"]):
+    if any(w in lower_t for w in ["kirana", "grocery", "provision", "store", "stall", "shop", "కిరాణా", "किराणा", "किराना", "ಕಿರಾಣಿ", "ಅಂಗಡಿ", "दुकान"]):
         trade = "Kirana Store"
     elif any(w in lower_t for w in ["dairy", "cow", "milk", "buffalo", "cattle", "ಹಸು", "ಹೈನುಗಾರಿಕೆ", "ఆవు", "పాడి", "गाय", "दूध", "डेअरी"]):
         trade = "Dairy Farming"
@@ -156,7 +157,8 @@ MANDATORY RULES:
 2. Present MULTIPLE eligible government schemes tailored to their project:
    - 🌟 Primary Direct Scheme: {scheme_name} (Low-interest State Channelising Agency loan)
    - 🏦 Alternative 1 (Zero-Collateral Bank Loan): {mudra_name} (No collateral or third-party guarantee, covers ₹{mudra_loan:,.2f})
-   - 🎁 Alternative 2 (Government Subsidy Grant): PMEGP (KVIC/DIC) with {pmegp_subsidy}% Government Margin Subsidy (₹{pmegp_subsidy_amount:,.2f} grant! Beneficiary only invests 5% own savings)
+   - 🎁 Alternative 2: PMEGP. Present ONLY these PMEGP facts, translated, with every number and eligibility result unchanged:
+{pmegp_facts}
    {sectoral_scheme_info}
 
 3. Include actionable, step-by-step instructions on HOW TO REDEEM / APPLY for these schemes:
@@ -172,7 +174,8 @@ MANDATORY RULES:
    - If {language} is "telugu": You MUST write 100% of your response in fluent TELUGU SCRIPT (తెలుగు లిపి). Every greeting, heading, explanation, bullet point, and call-to-action MUST be in Telugu. Keep only scheme acronyms and web links in Latin script. Absolutely NEVER reply in English!
    - If {language} is "marathi": You MUST write 100% of your response in DEVANAGARI SCRIPT (मराठी भाषा). Every greeting, heading, explanation, bullet point, and call-to-action MUST be in fluent Marathi. Absolutely NEVER reply in English!
    - If {language} is "english": Write your response in professional English.
-8. Keep the message concise and punchy (under 2,800 characters) so it reads effortlessly on mobile chat screens while covering all key points.
+8. Never add a number, rate, subsidy or eligibility statement that is not given above.
+9. Keep the message concise and punchy (under 2,800 characters) so it reads effortlessly on mobile chat screens while covering all key points.
 """
 
 def generate_advisory_message(
@@ -224,8 +227,7 @@ def generate_advisory_message(
         language=language,
         mudra_name=mudra.get("name", "PMMY Mudra"),
         mudra_loan=mudra.get("loan_amount", 0.0),
-        pmegp_subsidy=pmegp.get("subsidy_pct", 35),
-        pmegp_subsidy_amount=pmegp.get("subsidy_amount", 0.0),
+        pmegp_facts=format_pmegp_block(pmegp, "english"),
         sectoral_scheme_info=sectoral_info,
         nabard_benchmark=nabard_context or "Standard rural enterprise viability benchmark."
     )
@@ -283,7 +285,7 @@ def generate_advisory_message(
     repay_mos_val = financial_data.get("repayment_months", 33)
     emi_val = financial_data.get("emi", 0)
 
-    pmegp_sub = pmegp.get("subsidy_amount", cost * 0.35)
+    pmegp_block = format_pmegp_block(pmegp, language)
     mudra_loan_val = mudra.get("loan_amount", cost * 0.85)
 
     if language == "kannada":
@@ -311,12 +313,7 @@ def generate_advisory_message(
             f"📍 *ಪಡೆಯುವುದು ಹೇಗೆ*: {district} ಜಿಲ್ಲೆಯ ನಿಗಮದ ಕಚೇರಿಗೆ ಅಥವಾ ಜಿಲ್ಲಾ ಕೈಗಾರಿಕಾ ಕೇಂದ್ರಕ್ಕೆ (DIC) ಭೇಟಿ ನೀಡಿ. "
             f"ಆಧಾರ್, ಜಾತಿ/ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ, ದರಪಟ್ಟಿ (Quotations) ಮತ್ತು ಡಿಪಿಆರ್ ಸಲ್ಲಿಸಿ.\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"🎁 *ಯೋಜನೆ 2 (ಹೆಚ್ಚಿನ ಬಂಡವಾಳ ಸಬ್ಸಿಡಿ): PMEGP (KVIC / DIC)*\n"
-            f"• *ಸರ್ಕಾರಿ ಸಬ್ಸಿಡಿ ಅನುದಾನ*: *35% (₹{pmegp_sub:,.2f})* ಗ್ರಾಮೀಣ ಪ್ರದೇಶಕ್ಕೆ ನೇರ ಸಬ್ಸಿಡಿ\n"
-            f"• *ಉದ್ಯಮಿಯ ಪಾಲು*: ಕೇವಲ 5% (ಮಹಿಳೆಯರು/ವಿಶೇಷ ವರ್ಗಗಳಿಗೆ)\n"
-            f"• *ಬ್ಯಾಂಕ್ ಸಾಲ*: ಉಳಿದ 60% ಅವಧಿ ಸಾಲ\n"
-            f"📍 *ಪಡೆಯುವುದು ಹೇಗೆ*: KVIC ಅಧಿಕೃತ ಪೋರ್ಟಲ್‌ನಲ್ಲಿ (*www.kviconline.gov.in*) ಅರ್ಜಿ ಸಲ್ಲಿಸಿ. "
-            f"ಡಿಪಿಆರ್ ಮತ್ತು ಕೆವೈಸಿ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ; ಜಿಲ್ಲಾ ಸಮಿತಿ ಪರಿಶೀಲಿಸಿ {district} ಬ್ಯಾಂಕ್‌ಗೆ ಕಳುಹಿಸುತ್ತದೆ.\n\n"
+            f"{pmegp_block}\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"🏦 *ಯೋಜನೆ 3 (ಶ್ಯೂರಿಟಿ ರಹಿತ ಬ್ಯಾಂಕ್ ಸಾಲ): {mudra.get('name', 'PMMY ಮುದ್ರಾ')}*\n"
             f"• *ಸಾಲದ ಮೊತ್ತ*: ₹{mudra_loan_val:,.2f} ವರೆಗೆ\n"
@@ -360,12 +357,7 @@ def generate_advisory_message(
             f"📍 *आवेदन कैसे करें*: {district} जिले में निगम कार्यालय या जिला उद्योग केंद्र (DIC) से संपर्क करें। "
             f"आधार, जाति/आय प्रमाण पत्र, कोटेशन और अपनी डीपीआर जमा करें।\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"🎁 *योजना 2 (उच्च पूंजी सब्सिडी): PMEGP (KVIC / DIC)*\n"
-            f"• *सरकारी सब्सिडी अनुदान*: *35% (₹{pmegp_sub:,.2f})* ग्रामीण क्षेत्र के लिए सीधा अनुदान\n"
-            f"• *उद्यमी का अंशदान*: केवल 5% (महिलाओं एवं आरक्षित वर्गों हेतु)\n"
-            f"• *बैंक ऋण*: शेष 60% मियादी ऋण\n"
-            f"📍 *आवेदन कैसे करें*: KVIC के आधिकारिक पोर्टल (*www.kviconline.gov.in*) पर ऑनलाइन आवेदन करें। "
-            f"डीपीआर और केवाईसी अपलोड करें; जिला टास्क फोर्स समिति {district} में आपके बैंक को प्रेषित करेगी।\n\n"
+            f"{pmegp_block}\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"🏦 *योजना 3 (बिना गारंटी बैंक ऋण): {mudra.get('name', 'PMMY मुद्रा')}*\n"
             f"• *ऋण सीमा*: ₹{mudra_loan_val:,.2f} तक\n"
@@ -409,12 +401,7 @@ def generate_advisory_message(
             f"📍 *దరఖాస్తు విధానం*: {district} జిల్లాలోని కార్పొరేషన్ కార్యాలయం లేదా జిల్లా పరిశ్రమల కేంద్రం (DIC)ను సంప్రదించండి. "
             f"ఆధార్, కుల/ఆదాయ ధృవీకరణ పత్రం, కొటేషన్లు మరియు మీ DPR సమర్పించండి.\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"🎁 *పథకం 2 (అధిక మూలధన సబ్సిడీ): PMEGP (KVIC / DIC)*\n"
-            f"• *ప్రభుత్వ సబ్సిడీ గ్రాంట్*: *35% (₹{pmegp_sub:,.2f})* గ్రామీణ ప్రాంతాలకు ప్రత్యక్ష గ్రాంట్\n"
-            f"• *లబ్ధిదారుని వాటా*: కేవలం 5% (మహిళలు మరియు ప్రత్యేక వర్గాలకు)\n"
-            f"• *బ్యాంక్ రుణం*: మిగిలిన 60% కాలపరిమితి రుణం\n"
-            f"📍 *దరఖాస్తు విధానం*: KVIC అధికారిక పోర్టల్ (*www.kviconline.gov.in*) లో ఆన్‌లైన్‌లో దరఖాస్తు చేసుకోండి. "
-            f"DPR మరియు KYC అప్‌లోడ్ చేయండి; జిల్లా కమిటీ పరిశీలించి {district} లోని మీ బ్యాంక్‌కు పంపుతుంది.\n\n"
+            f"{pmegp_block}\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"🏦 *పథకం 3 (హామీ లేని బ్యాంక్ రుణం): {mudra.get('name', 'PMMY ముద్రా')}*\n"
             f"• *రుణ పరిమితి*: ₹{mudra_loan_val:,.2f} వరకు\n"
@@ -458,12 +445,7 @@ def generate_advisory_message(
             f"📍 *अर्ज कसा करावा*: {district} जिल्ह्यातील महामंडळ कार्यालय किंवा जिल्हा उद्योग केंद्राशी (DIC) संपर्क साधा. "
             f"आधार, जात/उत्पन्न दाखला, कोटेशन्स आणि आपला डीपीआर सादर करा.\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"🎁 *योजना २ (उच्च भांडवली सबसिडी): PMEGP (KVIC / DIC)*\n"
-            f"• *सरकारी सबसिडी अनुदान*: *35% (₹{pmegp_sub:,.2f})* ग्रामीण भागासाठी थेट सबसिडी\n"
-            f"• *उद्योजकाचा वाटा*: फक्त 5% (महिला व राखीव प्रवर्गासाठी)\n"
-            f"• *बँक कर्ज*: उर्वरित 60% मुदत कर्ज\n"
-            f"📍 *अर्ज कसा करावा*: KVIC च्या अधिकृत पोर्टलवर (*www.kviconline.gov.in*) ऑनलाइन अर्ज करा. "
-            f"डीपीआर आणि केवायसी अपलोड करा; जिल्हा समिती पडताळणी करून {district} मधील आपल्या बँकेकडे पाठवेल.\n\n"
+            f"{pmegp_block}\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"🏦 *योजना ३ (विनातारण बँक कर्ज): {mudra.get('name', 'PMMY मुद्रा')}*\n"
             f"• *कर्ज मर्यादा*: ₹{mudra_loan_val:,.2f} पर्यंत\n"
@@ -507,12 +489,7 @@ def generate_advisory_message(
         f"📍 *How to Redeem*: Visit the District SCA / Backward Classes Development Corporation office or DIC in {district}. "
         f"Submit KYC, caste/income certificate, asset quotations, and your DPR. Loan is disbursed directly to asset vendors.\n\n"
         f"━━━━━━━━━━━━━━━━━━━━━\n"
-        f"🎁 *SCHEME 2 (High Capital Subsidy): PMEGP (KVIC / DIC)*\n"
-        f"• *Government Subsidy Grant*: *35% (₹{pmegp_sub:,.2f})* direct back-ended grant in rural areas\n"
-        f"• *Beneficiary Contribution*: Only 5% required for special categories (SC/ST/OBC/Women)\n"
-        f"• *Bank Financing*: Balance 60% term loan\n"
-        f"📍 *How to Redeem*: Apply online on the official KVIC portal (*www.kviconline.gov.in*). "
-        f"Upload your DPR and KYC; District Task Force Committee (DTFC) screens and forwards to your bank branch in {district}.\n\n"
+        f"{pmegp_block}\n\n"
         f"━━━━━━━━━━━━━━━━━━━━━\n"
         f"🏦 *SCHEME 3 (Zero-Collateral Bank Loan): {mudra.get('name', 'PMMY MUDRA')}*\n"
         f"• *Loan Coverage*: Up to ₹{mudra_loan_val:,.2f}\n"

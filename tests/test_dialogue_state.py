@@ -5,6 +5,7 @@ from app.db import crud
 from app.dialogue.conversation_state import process_user_query
 from app.main import app
 from fastapi.testclient import TestClient
+from tests.intake_helpers import complete_intake
 
 client = TestClient(app)
 
@@ -22,6 +23,7 @@ def test_full_dialogue_to_sanction_flow():
     # Step 1: Initial user query
     user_msg = "I want to start a kirana stall in Belagavi with ₹1,20,000"
     process_user_query(phone, user_msg)
+    complete_intake(lambda t: process_user_query(phone, t), lambda db: crud.get_or_create_beneficiary(db, phone))
 
     db = SessionLocal()
     try:

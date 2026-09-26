@@ -3,6 +3,13 @@ from unittest.mock import patch
 from app.db.session import init_db
 
 @pytest.fixture(autouse=True)
+def offline_gemini(monkeypatch):
+    """Tests use the rule-based readers and templates: deterministic, and no Gemini quota is spent."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+
+
+@pytest.fixture(autouse=True)
 def setup_test_db():
     init_db()
     # Mock outbound network calls during automated test suite runs

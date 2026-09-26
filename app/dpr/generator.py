@@ -1,4 +1,5 @@
 import os
+from app.finance.formatting import format_inr
 import io
 import logging
 from datetime import datetime
@@ -9,6 +10,27 @@ logger = logging.getLogger("dpr_generator")
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 _jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR), autoescape=True)
+
+NOT_PROVIDED = "Not provided"
+GENDER_LABELS = {"male": "Man", "female": "Woman", "transgender": "Transgender"}
+CATEGORY_LABELS = {"general": "General", "sc": "SC", "st": "ST", "obc": "OBC", "minority": "Minority"}
+AREA_LABELS = {"rural": "Rural (Gram Panchayat)", "urban": "Urban (Municipality)"}
+
+
+def _pmegp_summary(pmegp):
+    """(benefit text, norm text) for the PMEGP rows, from the computed result only."""
+    if pmegp.get("eligible") is False:
+        return "Not eligible: " + " ".join(pmegp.get("ineligible_reasons") or []), "Not eligible"
+    if pmegp.get("eligible") and pmegp.get("subsidy_pct") is not None:
+        amount = format_inr(pmegp["subsidy_amount"]) if pmegp.get("subsidy_amount") is not None else "amount to be confirmed by DIC"
+        basis = f"{pmegp['category_basis'].capitalize()} category, {pmegp['area_type']}"
+        return (
+            f"{pmegp['subsidy_pct']:g}% subsidy ({amount}); own contribution {pmegp['own_contribution_pct']:g}% "
+            f"({format_inr(pmegp['own_contribution'])}); bank loan {pmegp['bank_loan_pct']:g}%",
+            f"{pmegp['subsidy_pct']:g}% ({basis})",
+        )
+    return "Not computed: applicant category / location not provided", "Not computed"
+
 
 def _get_trade_equipment_items(trade: str, total_cost: float) -> list:
     """Return realistic, trade-specific itemized capital equipment and working capital breakdown."""
@@ -193,9 +215,9 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
 
     # Meta bar
     prop_id = str(proposal.get("id", "PROPOSAL"))[:8].upper()
-    trade_name = str(proposal.get("business_trade", "Rural Enterprise"))
-    district_name = str(beneficiary.get("district") or proposal.get("district") or "Belagavi")
-    state_name = str(beneficiary.get("state") or proposal.get("state") or "Karnataka")
+    trade_name = str(proposal["business_trade"])
+    district_name = str(beneficiary.get("district") or proposal.get("district") or NOT_PROVIDED)
+    state_name = str(beneficiary.get("state") or proposal.get("state") or NOT_PROVIDED)
     meta_text = (
         f"<b>DPR Ref:</b> DPR-{prop_id} &nbsp;|&nbsp; "
         f"<b>Date:</b> {date_str} &nbsp;|&nbsp; "
@@ -207,22 +229,42 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
 
     # 1. Beneficiary Profile
     story.append(Paragraph("1. Entrepreneur & Promoter Profile", heading2_style))
+    # Applicant details exactly as stated and confirmed by the applicant; never defaulted
+    profile = beneficiary.get("profile") or {}
+
+    def _stated(field, fmt=str):
+        value = profile.get(field, beneficiary.get(field))
+        return fmt(value) if value is not None else NOT_PROVIDED
+
+    gender_age = f"{_stated('gender', lambda v: GENDER_LABELS.get(v, v))} / {_stated('age')}"
     beneficiary_table_data = [
         [
             Paragraph("<b>Applicant Name:</b>", cell_style),
-            Paragraph(str(beneficiary.get("full_name") or "Rural Entrepreneur"), bold_cell_style),
+            Paragraph(_stated("full_name"), bold_cell_style),
             Paragraph("<b>Contact No:</b>", cell_style),
-            Paragraph(str(beneficiary.get("whatsapp_number")), cell_style)
+            Paragraph(str(beneficiary.get("whatsapp_number") or NOT_PROVIDED), cell_style)
         ],
         [
             Paragraph("<b>Enterprise Location:</b>", cell_style),
             Paragraph(f"{district_name}, {state_name}", cell_style),
             Paragraph("<b>Language:</b>", cell_style),
-            Paragraph(str(beneficiary.get("preferred_language", "Kannada")).capitalize(), cell_style)
+            Paragraph(str(beneficiary.get("preferred_language") or NOT_PROVIDED).capitalize(), cell_style)
         ],
         [
-            Paragraph("<b>Annual Household Income:</b>", cell_style),
-            Paragraph(f"₹{float(beneficiary.get('annual_family_income') or 65000):,.2f}", cell_style),
+            Paragraph("<b>Gender / Age:</b>", cell_style),
+            Paragraph(gender_age, cell_style),
+            Paragraph("<b>Social Category:</b>", cell_style),
+            Paragraph(_stated("social_category", lambda v: CATEGORY_LABELS.get(v, v)), cell_style)
+        ],
+        [
+            Paragraph("<b>Location Type:</b>", cell_style),
+            Paragraph(_stated("area_type", lambda v: AREA_LABELS.get(v, v)), cell_style),
+            Paragraph("<b>Annual Family Income:</b>", cell_style),
+            Paragraph(_stated("annual_family_income", format_inr), cell_style)
+        ],
+        [
+            Paragraph("<b>Own Money to Invest:</b>", cell_style),
+            Paragraph(_stated("available_capital", format_inr), cell_style),
             Paragraph("<b>Appraisal Status:</b>", cell_style),
             Paragraph(f"<b>{proposal.get('status', 'DRAFT')} (Ready for Bank/SCA)</b>", cell_style)
         ]
@@ -235,13 +277,16 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     story.append(b_table)
+    story.append(Paragraph(
+        "<i>Applicant details are as stated and confirmed by the applicant in the conversation (User Input); "
+        "to be verified by the SCA field officer.</i>", cell_style))
     story.append(Spacer(1, 4))
 
     # 2. Proposed Enterprise & Dynamic Equipment Breakdown
-    cost = float(proposal.get("project_cost", 120000.0))
-    loan = float(proposal.get("sanctioned_loan", cost * 0.90))
-    margin = float(proposal.get("beneficiary_margin", cost * 0.10))
-    emi = float(proposal.get("monthly_emi", 3583.0))
+    cost = float(proposal["project_cost"])
+    loan = float(proposal["sanctioned_loan"])
+    margin = float(proposal["beneficiary_margin"])
+    emi = float(proposal["monthly_emi"])
     raw_dscr = proposal.get("projected_dscr")
     dscr = float(raw_dscr) if raw_dscr is not None else None
     scheme = proposal.get("scheme_tier", "MICRO_FINANCE")
@@ -377,7 +422,8 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
 
     # 6. Multi-Scheme Concurrence
     story.append(Paragraph("6. Multi-Scheme Government Lending & Subsidy Alternatives", heading2_style))
-    pmegp_subsidy = cost * 0.35
+    pmegp = (proposal.get("multi_schemes") or {}).get("pmegp") or {}
+    pmegp_benefit, pmegp_norm = _pmegp_summary(pmegp)
     mudra_loan = cost * 0.85
     schemes_data = [
         [Paragraph("<b>Scheme</b>", white_header_style), Paragraph("<b>Type & Agency</b>", white_header_style), Paragraph("<b>Key Financial Benefit</b>", white_header_style), Paragraph("<b>Redemption Platform</b>", white_header_style)],
@@ -390,7 +436,7 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
         [
             Paragraph("<b>PMEGP (KVIC / DIC)</b>", bold_cell_style),
             Paragraph("Capital Subsidy Grant", cell_style),
-            Paragraph(f"<b>35% Free Grant (₹{pmegp_subsidy:,.2f})</b>; Only 5% margin needed", bold_cell_style),
+            Paragraph(pmegp_benefit, bold_cell_style),
             Paragraph("Online at www.kviconline.gov.in", cell_style)
         ],
         [
@@ -494,9 +540,9 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
     # Row 6: PMEGP Subsidy Norm
     prov_rows.append([
         Paragraph("PMEGP Capital Subsidy Norm", cell_style),
-        Paragraph("35.0% (Rural Special)", bold_cell_style),
+        Paragraph(pmegp_norm, bold_cell_style),
         Paragraph("Ministry of MSME PMEGP Guidelines", cell_style),
-        Paragraph("4", cell_style),
+        Paragraph("4, 9", cell_style),
         Paragraph("2023", cell_style),
         Paragraph("Scheme Rule", cell_style),
     ])

@@ -1,5 +1,6 @@
 from typing import Dict, Any, List, Optional
 from app.finance.calculator import calculate_financial_structure
+from app.finance.pmegp import compute_pmegp
 
 def get_sector_specific_scheme(trade: str, cost: float, district: str) -> Optional[Dict[str, Any]]:
     """Determine sectoral/trade-specific government scheme based on business type."""
@@ -79,17 +80,18 @@ def get_sector_specific_scheme(trade: str, cost: float, district: str) -> Option
 
 def get_all_eligible_schemes(
     cost: float,
-    trade: str = "Rural Enterprise",
-    district: str = "Belagavi",
-    state: str = "Karnataka",
-    available_capital: Optional[float] = None
+    trade: Optional[str] = None,
+    district: Optional[str] = None,
+    state: Optional[str] = None,
+    available_capital: Optional[float] = None,
+    profile: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
     """
     Compile a complete multi-scheme package for an entrepreneur based on project cost and trade.
     Returns:
       - primary_sca: NBCFDC / NMDFC / State Channelising Agency scheme (MFS or TLS)
       - mudra: Pradhan Mantri MUDRA Yojana (Shishu / Kishore / Tarun)
-      - pmegp: Prime Minister's Employment Generation Programme with 25%-35% subsidy
+      - pmegp: Prime Minister's Employment Generation Programme, computed from the applicant profile
       - sectoral: Sector/Trade specific scheme if applicable
     """
     # 1. Primary SCA Scheme (MFS or TLS)
@@ -133,51 +135,17 @@ def get_all_eligible_schemes(
         "highlights": "No collateral or third-party guarantor required. Covered under CGFMU government credit guarantee. Includes MUDRA RuPay Card.",
         "how_to_redeem": [
             "Apply online through the government JanSamarth Portal (www.jansamarth.in) or UdyamiMitra Portal (www.udyamimitra.in).",
-            "Alternatively, walk into any Public Sector Bank (SBI, Canara Bank, BoB), Regional Rural Bank (Karnataka Gramin Bank), or local Bank branch in " + district + ".",
+            "Alternatively, walk into any Public Sector Bank (SBI, Canara Bank, BoB), Regional Rural Bank (Karnataka Gramin Bank), or local Bank branch in " + (district or "your district") + ".",
             "Submit your KYC (Aadhaar, PAN), Bank Passbook copy, Udyam Registration (free online), and the DPR generated here.",
             "Loan is sanctioned and credited into your account with MUDRA RuPay card."
         ]
     }
 
-    # 3. PMEGP (KVIC/KVIB/DIC) Subsidy Scheme - Grounded in PMEGP Revised Guidelines 2023
-    rural_subsidy_pct = 35.0  # Special category (SC/ST/OBC/Women/Minority) in rural areas (Page 4, Para 3.2)
-    general_subsidy_pct = 25.0 # General category in rural areas (Page 4, Para 3.2)
-    subsidy_amount = cost * (rural_subsidy_pct / 100.0)
-    pmegp_own_contribution = cost * 0.05 # Special category only contributes 5% (Page 4, Para 3.2)
-    pmegp_bank_loan = cost - subsidy_amount - pmegp_own_contribution
-
-    pmegp_scheme = {
-        "name": "Prime Minister's Employment Generation Programme (PMEGP)",
-        "agency": "KVIC / KVIB / District Industries Centre (DIC)",
-        "type": "Credit-Linked Capital Margin Subsidy",
-        "subsidy_pct": rural_subsidy_pct,
-        "subsidy_amount": subsidy_amount,
-        "general_subsidy_pct": general_subsidy_pct,
-        "own_contribution": pmegp_own_contribution,
-        "own_contribution_pct": 5,
-        "bank_loan": pmegp_bank_loan,
-        "max_project_cost_mfg": 5000000.0,
-        "max_project_cost_service": 2000000.0,
-        "interest_rate": "Normal bank interest (approx 9% - 10.5% p.a.)",
-        "tenure": "36 to 84 months",
-        "source_id": "PMEGP_REVISED_GUIDELINES_2023",
-        "source_organization": "Ministry of MSME, Government of India",
-        "source_page": 4,
-        "publication_year": 2023,
-        "verification_status": "VERIFIED_OFFICIAL",
-        "source_type": "GOVERNMENT_SCHEME_RULE",
-        "highlights": f"Highest government grant available: {rural_subsidy_pct:.0f}% direct subsidy (₹{subsidy_amount:,.2f}) credited to your account! You only need 5% own savings (₹{pmegp_own_contribution:,.2f}).",
-        "how_to_redeem": [
-            "Register online on the KVIC PMEGP portal: www.kviconline.gov.in.",
-            "Upload DPR (generated here), Aadhaar card, Caste/Category Certificate, and Rural Area certificate from your Gram Panchayat.",
-            "The District Task Force Committee (DTFC) headed by District Collector screens the application and forwards it to your chosen financing bank in " + district + ".",
-            "Attend the 5-10 day online Entrepreneurship Development Programme (EDP) training.",
-            "Bank releases the loan; KVIC deposits the 35% margin money subsidy directly into your Subsidy Reserve Account."
-        ]
-    }
+    # 3. PMEGP (KVIC/KVIB/DIC): rates depend on the applicant's stated category and area (verified guideline rules)
+    pmegp_scheme = compute_pmegp(cost, trade, profile)
 
     # 4. Sectoral Scheme (if matching)
-    sectoral_scheme = get_sector_specific_scheme(trade, cost, district)
+    sectoral_scheme = get_sector_specific_scheme(trade or "", cost, district or "your district")
 
     return {
         "cost": cost,

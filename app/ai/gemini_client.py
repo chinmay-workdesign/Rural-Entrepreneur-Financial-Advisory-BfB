@@ -5,14 +5,17 @@ from app.config import settings
 
 logger = logging.getLogger("gemini_client")
 
-# Active verified models on Google AI Studio
-VERIFIED_GEMINI_MODELS = [
-    "gemini-3.5-flash-lite",
-    "gemini-flash-lite-latest",
+# Low-cost fallbacks only (tried when the configured model is rate-limited or unavailable).
+# gemini-2.5-* is no longer served to new API keys.
+LITE_FALLBACK_MODELS = [
     "gemini-3.1-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-2.5-flash",
+    "gemini-3.5-flash-lite",
 ]
+
+
+def _dedupe(models: List[str]) -> List[str]:
+    seen = set()
+    return [m for m in models if m and not (m in seen or seen.add(m))]
 
 
 def is_gemini_configured() -> bool:
@@ -69,11 +72,8 @@ def call_gemini_chat(
 
     config = types.GenerateContentConfig(**config_kwargs)
 
-    # Prioritize configured model if specified, followed by verified available models
-    configured_model = settings.GEMINI_MODEL.strip() if settings.GEMINI_MODEL else "gemini-2.5-flash"
-    candidate_list = [configured_model] + VERIFIED_GEMINI_MODELS
-    seen = set()
-    models_to_try = [m for m in candidate_list if not (m in seen or seen.add(m))]
+    # Configured model first, then the low-cost fallbacks
+    models_to_try = _dedupe([(settings.GEMINI_MODEL or "").strip()] + LITE_FALLBACK_MODELS)
 
     for model_name in models_to_try:
         try:
@@ -126,6 +126,8 @@ def transcribe_audio_gemini(
         f"You are an expert speech recognition system for rural Indian entrepreneurs. "
         f"Transcribe this audio recording accurately into text in its original spoken language "
         f"(such as {source_language}, Hindi, Marathi, Telugu, Tamil, or English). "
+        f"Write every number, amount and age with digits, keeping the spoken unit word "
+        f"(e.g. 'two lakh' -> '2 lakh', 'ಎರಡು ಲಕ್ಷ' -> '2 ಲಕ್ಷ', 'पैंतीस साल' -> '35 साल'). "
         f"Return ONLY the plain transcribed text without markdown, quotes, or explanations."
     )
 
@@ -145,15 +147,10 @@ def transcribe_audio_gemini(
         automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
     )
 
-    AUDIO_MODELS = [
-        "gemini-2.5-flash",
-        "gemini-flash-latest",
-        "gemini-2.5-flash-lite",
-        "gemini-3.5-flash",
-        "gemini-3-flash-preview",
-    ]
+    # Configured audio model first, then the low-cost fallbacks
+    audio_models = _dedupe([(settings.GEMINI_AUDIO_MODEL or "").strip()] + LITE_FALLBACK_MODELS)
 
-    for model_name in AUDIO_MODELS:
+    for model_name in audio_models:
         try:
             response = client.models.generate_content(
                 model=model_name,

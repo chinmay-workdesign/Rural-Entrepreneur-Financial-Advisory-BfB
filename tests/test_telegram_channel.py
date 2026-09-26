@@ -1,3 +1,4 @@
+from tests.intake_helpers import complete_intake
 import uuid
 import pytest
 from fastapi.testclient import TestClient
@@ -66,6 +67,8 @@ def test_telegram_end_to_end_dialogue_to_sanction():
 
     # Step 1: User sends message on Telegram
     process_telegram_query(chat_id, "I want to start a poultry broiler farm in Mandya with ₹2,80,000", user_name="Suresh")
+    complete_intake(lambda t: process_telegram_query(chat_id, t, user_name="Suresh"),
+                    lambda db: crud.get_or_create_telegram_beneficiary(db, chat_id))
 
     db = SessionLocal()
     try:

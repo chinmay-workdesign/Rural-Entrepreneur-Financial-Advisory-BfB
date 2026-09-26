@@ -14,7 +14,9 @@ class Settings(BaseSettings):
 
     # Google Gemini (Free Tier LLM & Multimodal Audio STT)
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    # Cheapest models that work for new API keys: flash-lite for text, 3.5 flash-lite for audio input
+    GEMINI_MODEL: str = "gemini-3.1-flash-lite"
+    GEMINI_AUDIO_MODEL: str = "gemini-3.5-flash-lite"
 
     # Database
     DATABASE_URL: Optional[str] = None

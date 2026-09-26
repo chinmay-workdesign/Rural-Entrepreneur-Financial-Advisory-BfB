@@ -1,5 +1,7 @@
 import re
+import copy
 import logging
+from sqlalchemy.orm.attributes import flag_modified
 from typing import Dict, Any, Optional
 from app.db.session import SessionLocal
 from app.db import crud
@@ -16,6 +18,7 @@ from app.telegram.client import (
 )
 from app.voice.voice_service import transcribe_audio, synthesize_speech
 from app.ai.extraction import extract_entrepreneur_details, generate_advisory_message
+from app.dialogue import intake
 from app.finance.benchmarks import get_trade_benchmark
 from app.finance.calculator import calculate_financial_structure, validate_project_cost
 from app.finance.dscr import project_financial_cashflows
@@ -24,11 +27,11 @@ from app.storage import save_dpr_pdf, upload_dpr_pdf
 
 logger = logging.getLogger("conversation_state")
 
-GREETING_MSG_KN = "ನಮಸ್ಕಾರ! ಗ್ರಾಮೀಣ ಕಿರು-ಉದ್ಯಮ ಸಲಹಾ ಕೇಂದ್ರಕ್ಕೆ ಸ್ವಾಗತ. ನೀವು ಯಾವ ಉದ್ಯಮವನ್ನು (ಉದಾ. ಕಿರಾಣಿ ಅಂಗಡಿ, ಹೈನುಗಾರಿಕೆ, ಹೊಲಿಗೆ) ಯಾವ ಜಿಲ್ಲೆಯಲ್ಲಿ ಎಷ್ಟು ಬಂಡವಾಳದೊಂದಿಗೆ ಪ್ರಾರಂಭಿಸಲು ಬಯಸುತ್ತೀರಿ?"
-GREETING_MSG_HI = "नमस्ते! ग्रामीण सूक्ष्म उद्यम सलाहकार केंद्र में आपका स्वागत है। आप कौन सा व्यवसाय (जैसे किराना दुकान, डेयरी, सिलाई) किस जिले में कितनी पूंजी के साथ शुरू करना चाहते हैं?"
-GREETING_MSG_TE = "నమస్కారం! గ్రామీణ సూక్ష్మ-వ్యాపార సలహా కేంద్రానికి స్వాగతం. మీరు ఏ వ్యాపారాన్ని (ఉదా. కిరాణా దుకాణం, పాడి పరిశ్రమ/ఆవులు, కుట్టు పని, కోళ్ల పెంపకం) ఏ జిల్లాలో ఎంత పెట్టుబడితో ప్రారంభించాలనుకుంటున్నారు?"
-GREETING_MSG_MR = "नमस्कार! ग्रामीण सूक्ष्म-उद्योग सल्ला केंद्रात आपले स्वागत आहे. आपण कोणता व्यवसाय (उदा. किराणा दुकान, दुग्ध व्यवसाय/गाय, शिलाई काम, कुक्कुटपालन) कोणत्या जिल्ह्यात आणि किती भांडवलासह सुरू करू इच्छिता?"
-GREETING_MSG_EN = "Namaste! Welcome to the Rural Micro-Enterprise AI Advisory. Which business trade (e.g. Kirana stall, Dairy cow, Tailoring) do you want to start, in which district, and what is your required project cost?"
+GREETING_MSG_KN = "ನಮಸ್ಕಾರ! ಗ್ರಾಮೀಣ ಕಿರು-ಉದ್ಯಮ ಸಲಹಾ ಕೇಂದ್ರಕ್ಕೆ ಸ್ವಾಗತ. ನೀವು ಯಾವ ಉದ್ಯಮವನ್ನು (ಉದಾ. ಕಿರಾಣಿ ಅಂಗಡಿ, ಹೈನುಗಾರಿಕೆ, ಹೊಲಿಗೆ) ಕರ್ನಾಟಕದ ಯಾವ ಜಿಲ್ಲೆಯಲ್ಲಿ ಪ್ರಾರಂಭಿಸಲು ಬಯಸುತ್ತೀರಿ, ಮತ್ತು ಯೋಜನೆಯ ಒಟ್ಟು ವೆಚ್ಚ ಎಷ್ಟು? ನೀವು ಟೈಪ್ ಮಾಡಬಹುದು ಅಥವಾ ಧ್ವನಿ ಸಂದೇಶ ಕಳುಹಿಸಬಹುದು."
+GREETING_MSG_HI = "नमस्ते! ग्रामीण सूक्ष्म उद्यम सलाहकार केंद्र में आपका स्वागत है। आप कौन सा व्यवसाय (जैसे किराना दुकान, डेयरी, सिलाई) कर्नाटक के किस जिले में शुरू करना चाहते हैं, और परियोजना की कुल लागत कितनी है? आप टाइप कर सकते हैं या वॉइस नोट भेज सकते हैं।"
+GREETING_MSG_TE = "నమస్కారం! గ్రామీణ సూక్ష్మ-వ్యాపార సలహా కేంద్రానికి స్వాగతం. మీరు ఏ వ్యాపారాన్ని (ఉదా. కిరాణా దుకాణం, పాడి పరిశ్రమ/ఆవులు, కుట్టు పని, కోళ్ల పెంపకం) కర్ణాటకలోని ఏ జిల్లాలో ప్రారంభించాలనుకుంటున్నారు, ప్రాజెక్ట్ మొత్తం ఖర్చు ఎంత? మీరు టైప్ చేయవచ్చు లేదా వాయిస్ నోట్ పంపవచ్చు."
+GREETING_MSG_MR = "नमस्कार! ग्रामीण सूक्ष्म-उद्योग सल्ला केंद्रात आपले स्वागत आहे. आपण कोणता व्यवसाय (उदा. किराणा दुकान, दुग्ध व्यवसाय/गाय, शिलाई काम, कुक्कुटपालन) कर्नाटकातील कोणत्या जिल्ह्यात सुरू करू इच्छिता, आणि प्रकल्पाचा एकूण खर्च किती आहे? आपण टाइप करू शकता किंवा व्हॉइस नोट पाठवू शकता."
+GREETING_MSG_EN = "Namaste! Welcome to the Rural Micro-Enterprise AI Advisory. Which business (e.g. Kirana stall, Dairy cow, Tailoring) do you want to start, in which district of Karnataka, and what is the total project cost? You can type or send a voice note."
 
 # Appended deterministically (never via LLM) when a trade has no official benchmark.
 NO_BENCHMARK_NOTICE = {
@@ -156,11 +159,19 @@ LANGUAGE_CONFIRMATIONS = {
     "marathi": "निवडलेली भाषा: *मराठी* ✅\n\n" + GREETING_MSG_MR,
 }
 
-def _resolve_language_choice(text: str) -> Optional[str]:
+def _resolve_language_choice(text: str, allow_numeric: bool = True) -> Optional[str]:
+    """
+    Language picked from the menu. Bare menu numbers count only while the menu is shown, so answers
+    such as '2 lakh' or '1.5 lakh' later in the conversation are never read as a language choice.
+    """
     t = text.strip().lower()
+    if not allow_numeric and re.match(r"^[0-9]", t) and not re.match(r"^[1-5]\.\s+[^\d\s]", t):
+        return None
     if t in LANGUAGE_CHOICES:
         return LANGUAGE_CHOICES[t]
     for num, lang in [("1", "english"), ("2", "hindi"), ("3", "kannada"), ("4", "telugu"), ("5", "marathi")]:
+        if not allow_numeric:
+            break
         if t == num or t.startswith(f"{num} ") or t.startswith(f"{num}.") or t.startswith(f"{num}-"):
             return lang
     if len(t.split()) <= 4:
@@ -378,11 +389,11 @@ def process_user_query(from_phone: str, user_text: str):
 
 # ==================== CORE STATE MACHINE ====================
 
-def _send_voice_audio_reply(beneficiary, text: str, lang: str):
+def _send_voice_audio_reply(beneficiary, text: str, lang: str, max_lines: Optional[int] = 3):
     """Synthesize speech and send as voice note to the user if channel supports voice."""
     try:
         lines = [line.strip() for line in text.split("\n") if line.strip() and not line.startswith("━")]
-        spoken_text = " ".join(lines[:3]) if lines else text[:250]
+        spoken_text = " ".join(lines[:max_lines] if max_lines else lines) if lines else text[:250]
         clean_text = spoken_text.replace("*", "").replace("#", "").replace("-", " ")
         audio_bytes = synthesize_speech(clean_text, target_language=lang)
         if audio_bytes:
@@ -394,7 +405,8 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
     """Shared state machine for both Telegram and WhatsApp channels."""
     text_clean = user_text.strip()
     state = beneficiary.conversation_state or "LANGUAGE_SELECTION"
-    context = beneficiary.conversation_context or {}
+    # Work on a copy: in-place edits to the stored JSON are invisible to SQLAlchemy and would not be saved
+    context = copy.deepcopy(beneficiary.conversation_context or {})
 
     channel_name = "Telegram" if getattr(beneficiary, "primary_channel", "") == "telegram" else "WhatsApp"
     logger.info(f"[{channel_name}] Beneficiary {beneficiary.id[:8]} (state: {state}): '{text_clean}'")
@@ -407,13 +419,14 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
     ]
     if text_clean.upper() in start_or_lang_cmds:
         beneficiary.conversation_state = "LANGUAGE_SELECTION"
-        beneficiary.conversation_context = {}
+        keep = {} if text_clean.upper() in ("RESET", "CLEAR", "NEW") else {"profile": context.get("profile") or {}}
+        beneficiary.conversation_context = keep
         db.commit()
         send_channel_text(beneficiary, LANGUAGE_PROMPT_MSG, reply_markup=LANGUAGE_KEYBOARD)
         return
 
     # 2. Check if user selected or typed a language choice (e.g. 1-5, 'telugu', 'telgu', 'marathi', etc.)
-    chosen_lang = _resolve_language_choice(text_clean)
+    chosen_lang = _resolve_language_choice(text_clean, allow_numeric=(state == "LANGUAGE_SELECTION"))
     if chosen_lang:
         beneficiary.preferred_language = chosen_lang
         beneficiary.conversation_state = "COLLECTING"
@@ -424,8 +437,11 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
             _send_voice_audio_reply(beneficiary, confirmation, chosen_lang)
         return
 
-    # 3. Synchronize language from message if clearly detected
+    # 3. Synchronize language from message if clearly detected. Short Latin-script answers (a name, a
+    # district, "OBC") during intake do not switch a regional-language user to English.
     detected_lang = detect_message_language(text_clean)
+    if detected_lang == "english" and state in ("COLLECTING", "CONFIRM_PROFILE") and len(text_clean.split()) < 5:
+        detected_lang = None
     if detected_lang:
         beneficiary.preferred_language = detected_lang
         db.commit()
@@ -472,7 +488,7 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
         if detected_lang:
             beneficiary.conversation_state = "COLLECTING"
             db.commit()
-            _handle_extraction_and_advisory(db, beneficiary, text_clean, context, from_voice=from_voice)
+            _handle_intake_turn(db, beneficiary, text_clean, context, from_voice=from_voice)
             return
 
         # Otherwise re-send language selection prompt
@@ -484,7 +500,7 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
     # 5. Greetings when already in an active dialogue state
     if text_clean.upper() in ["HI", "HELLO", "ನಮಸ್ಕಾರ", "नमस्ते", "నమస్కారం", "నమస్తే", "नमस्कार"]:
         beneficiary.conversation_state = "COLLECTING"
-        beneficiary.conversation_context = {}
+        beneficiary.conversation_context = {"profile": context.get("profile") or {}}
         db.commit()
         if lang == "kannada":
             greeting = GREETING_MSG_KN
@@ -503,36 +519,10 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
 
     # Check for DPR generation trigger
     if "GENERATE DPR" in text_clean.upper() or "DPR" in text_clean.upper():
-        # Resolve DPR inputs from the conversation or the latest saved proposal; never assume them
-        if not context.get("financial_structure"):
-            trade = context.get("trade")
-            district = context.get("district") or beneficiary.district
-            state = context.get("state") or beneficiary.state or "Karnataka"
-            project_cost = context.get("project_cost")
-
-            if not project_cost or not trade:
-                from app.db.models import EnterpriseProposal
-                latest_prop = db.query(EnterpriseProposal).filter(
-                    EnterpriseProposal.beneficiary_id == beneficiary.id
-                ).order_by(EnterpriseProposal.created_at.desc()).first()
-                if latest_prop:
-                    project_cost = project_cost or (float(latest_prop.project_cost) if latest_prop.project_cost else None)
-                    trade = trade or latest_prop.business_trade
-
-            missing = [
-                name for name, value in (("trade", trade), ("district", district), ("project_cost", project_cost))
-                if not value
-            ]
-            if missing:
-                context.update({k: v for k, v in (("trade", trade), ("district", district), ("project_cost", project_cost)) if v})
-                beneficiary.conversation_state = "COLLECTING"
-                beneficiary.conversation_context = context
-                db.commit()
-                clarification_msg = _generate_clarification_question(missing, trade, district, lang)
-                send_channel_text(beneficiary, clarification_msg)
-                if from_voice:
-                    _send_voice_audio_reply(beneficiary, clarification_msg, lang)
-                return
+        # A DPR is produced only from details the applicant has stated and confirmed
+        if not context.get("profile_confirmed") or not context.get("financial_structure"):
+            _prompt_intake(db, beneficiary, context, lang, from_voice)
+            return
 
         # Send the 2-minute waiting notification requested by the user
         if lang == "kannada":
@@ -546,30 +536,6 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
         else:
             wait_msg = "⏳ Generating your bank-ready Detailed Project Report (DPR PDF). Please wait for 2 minutes while we compile your financial statements and cash flow projections..."
         send_channel_text(beneficiary, wait_msg)
-
-        # Build the financial structure from the resolved (user-supplied) inputs
-        if not context.get("financial_structure"):
-            fin_result = calculate_financial_structure(project_cost)
-            cashflows = project_financial_cashflows(project_cost, fin_result["emi"])
-            bench = _resolve_trade_benchmark(trade, district, cashflows)
-
-            from app.finance.multi_schemes import get_all_eligible_schemes
-            multi_schemes = get_all_eligible_schemes(cost=project_cost, trade=trade, district=district, state=state)
-
-            context.update({
-                "trade": trade,
-                "district": district,
-                "state": state,
-                "project_cost": project_cost,
-                "financial_structure": fin_result,
-                "cashflows": cashflows,
-                "nabard_benchmark": bench["summary"],
-                "benchmark_available": bench["available"],
-                "multi_schemes": multi_schemes
-            })
-            beneficiary.conversation_context = context
-            beneficiary.conversation_state = "CONFIRM_DPR"
-            db.commit()
 
         _handle_dpr_generation(db, beneficiary, context)
         return
@@ -665,21 +631,11 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
         is_new_venture = bool(new_trade and new_trade.lower() != curr_trade.lower())
         has_new_cost = bool(extracted.get("project_cost") and extracted.get("project_cost") != context.get("project_cost"))
 
-        if is_new_venture:
-            context = {
-                "trade": new_trade,
-                "district": extracted.get("district") or context.get("district"),
-                "state": extracted.get("state") or context.get("state"),
-                "project_cost": extracted.get("project_cost"),
-                "available_capital": extracted.get("available_capital")
-            }
-            beneficiary.conversation_context = context
+        if is_new_venture or has_new_cost:
+            if is_new_venture:
+                context = {"profile": context.get("profile") or {}}
             beneficiary.conversation_state = "COLLECTING"
-            db.commit()
-            _handle_extraction_and_advisory(db, beneficiary, text_clean, context, from_voice=from_voice)
-            return
-        elif has_new_cost:
-            _handle_extraction_and_advisory(db, beneficiary, text_clean, context, from_voice=from_voice)
+            _handle_intake_turn(db, beneficiary, text_clean, context, from_voice=from_voice)
             return
 
         trade = context.get("trade", "your enterprise")
@@ -726,7 +682,15 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
             _send_voice_audio_reply(beneficiary, fallback_ans, lang)
         return
 
-    # 4. Phase 5: Local Authoritative RAG Intent Routing
+    # 4. While collecting details, treat the message as an answer first
+    if state == "CONFIRM_PROFILE":
+        _handle_profile_confirmation(db, beneficiary, text_clean, context, from_voice=from_voice)
+        return
+    if state == "COLLECTING" and context.get("pending_field"):
+        if _handle_intake_turn(db, beneficiary, text_clean, context, from_voice=from_voice, allow_passthrough=True):
+            return
+
+    # 5. Phase 5: Local Authoritative RAG Intent Routing
     # Check for Factual, Mixed, or Data-Unavailable inquiries before proposal accumulation
     from app.retrieval.router import classify_query_intent, execute_authoritative_routing, QueryIntent
     rag_intent, _ = classify_query_intent(text_clean)
@@ -739,7 +703,7 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
 
     # Handle conversation stages
     if state in ["GREETING", "COLLECTING", "ADVISING", "CONFIRM_DPR"]:
-        _handle_extraction_and_advisory(db, beneficiary, text_clean, context, from_voice=from_voice)
+        _handle_intake_turn(db, beneficiary, text_clean, context, from_voice=from_voice)
 
 def _generate_clarification_question(missing: list, trade: Optional[str], district: Optional[str], lang: str) -> str:
     """Generate friendly, personalized clarification prompt for missing parameters in preferred language."""
@@ -843,74 +807,139 @@ def _generate_clarification_question(missing: list, trade: Optional[str], distri
     else:
         return "Please share the following details so we can structure your exact government loan and subsidy options:\n\n" + "\n\n".join(questions)
 
-def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[str, Any], from_voice: bool = False):
-    """Extract parameters, ask clarifying questions if details are missing, and only advise when trade, district, and cost are known."""
-    extracted = extract_entrepreneur_details(text)
-    logger.info(f"Extracted parameters: {extracted}")
+def _save_context(db, beneficiary, context: Dict[str, Any]):
+    beneficiary.conversation_context = copy.deepcopy(context)
+    flag_modified(beneficiary, "conversation_context")
+    db.commit()
 
-    # 1. Update preferred language ONLY if an explicit regional script is detected or user had none
-    detected_lang = detect_message_language(text)
-    if detected_lang and detected_lang != "english":
-        beneficiary.preferred_language = detected_lang
-    elif not beneficiary.preferred_language:
-        beneficiary.preferred_language = detected_lang or "kannada"
 
-    lang = beneficiary.preferred_language or "kannada"
+def _send(beneficiary, text: str, lang: str, from_voice: bool, speak_all: bool = False):
+    send_channel_text(beneficiary, text)
+    if from_voice:
+        _send_voice_audio_reply(beneficiary, text, lang, max_lines=None if speak_all else 3)
 
-    # 2. Accumulate incoming details without overwriting existing context with None
-    if extracted.get("trade"):
-        context["trade"] = extracted["trade"]
-    if extracted.get("district"):
-        context["district"] = extracted["district"]
-    if extracted.get("state"):
-        context["state"] = extracted["state"]
-    if extracted.get("project_cost"):
-        context["project_cost"] = extracted["project_cost"]
-    if extracted.get("available_capital"):
-        context["available_capital"] = extracted["available_capital"]
 
-    trade = context.get("trade")
-    district = context.get("district")
-    project_cost = context.get("project_cost")
-    state = context.get("state") or "Karnataka"
+def _looks_like_question(text: str) -> bool:
+    lower = text.lower()
+    return "?" in text or any(w in lower for w in (
+        "what", "how", "which", "why", "ಏನು", "ಹೇಗೆ", "ಯಾವ", "ಏಕೆ", "क्या", "कैसे", "कौन", "क्यों",
+        "ఏమి", "ఎలా", "ఏ ", "ఎందుకు", "काय", "कसे", "कोणत", "का ",
+    ))
 
-    # 3. Check for missing mandatory parameters (No preassumptions!)
-    missing = []
-    if not trade:
-        missing.append("trade")
-    if not district:
-        missing.append("district")
-    if not project_cost:
-        missing.append("project_cost")
 
-    if missing:
+def _prompt_intake(db, beneficiary, context: Dict[str, Any], lang: str, from_voice: bool, prefix: str = ""):
+    """Ask the next missing detail, or show the summary for confirmation once everything is collected."""
+    nxt = intake.next_missing(context)
+    context["awaiting_field_choice"] = False
+    if nxt:
+        context["pending_field"] = nxt
         beneficiary.conversation_state = "COLLECTING"
-        beneficiary.conversation_context = context
-        db.commit()
+        msg = intake.question(nxt, lang)
+        speak_all = False
+    else:
+        context["pending_field"] = None
+        beneficiary.conversation_state = "CONFIRM_PROFILE"
+        msg = intake.summary(context, lang)
+        speak_all = True  # voice users must hear every detail they are confirming
+    _save_context(db, beneficiary, context)
+    _send(beneficiary, f"{prefix}\n\n{msg}" if prefix else msg, lang, from_voice, speak_all=speak_all)
 
-        clarification_msg = _generate_clarification_question(missing, trade, district, lang)
-        send_channel_text(beneficiary, clarification_msg)
-        if from_voice:
-            _send_voice_audio_reply(beneficiary, clarification_msg, lang)
+
+def _handle_intake_turn(db, beneficiary, text: str, context: Dict[str, Any], from_voice: bool = False,
+                        allow_passthrough: bool = False) -> bool:
+    """
+    One intake step. Returns False (without replying) only when allow_passthrough is set and the message
+    answered nothing but looks like a general question, so the caller can route it elsewhere.
+    """
+    lang = beneficiary.preferred_language or "english"
+    pending = context.get("pending_field")
+    answers = intake.extract_answers(text, pending)
+    updated, issue = intake.apply_answers(context, answers)
+    logger.info(f"Intake answers: updated={updated} issue={issue}")
+
+    if updated:
+        # Any change means the applicant must confirm again before advice is recalculated
+        context["profile_confirmed"] = False
+        for stale in ("financial_structure", "cashflows", "multi_schemes", "nabard_benchmark"):
+            context.pop(stale, None)
+
+    if issue:
+        if issue[0] in ("out_of_coverage", "district_unrecognised"):
+            context.pop("district", None)
+            context.pop("state", None)
+        _prompt_intake(db, beneficiary, context, lang, from_voice, prefix=intake.issue_message(issue, lang))
+        return True
+
+    if not updated:
+        if allow_passthrough and _looks_like_question(text):
+            return False
+        prefix = intake.text_for(intake.MESSAGES["not_understood"], lang) if pending else ""
+        _prompt_intake(db, beneficiary, context, lang, from_voice, prefix=prefix)
+        return True
+
+    _prompt_intake(db, beneficiary, context, lang, from_voice)
+    return True
+
+
+def _handle_profile_confirmation(db, beneficiary, text: str, context: Dict[str, Any], from_voice: bool = False):
+    """CONFIRM_PROFILE: 'yes' runs the advisory; corrections update the details and show the summary again."""
+    lang = beneficiary.preferred_language or "english"
+
+    if context.get("awaiting_field_choice"):
+        field = intake.match_field_name(text)
+        if field:
+            intake.set_value(context, field, None)
+            context["profile_confirmed"] = False
+            _prompt_intake(db, beneficiary, context, lang, from_voice)
+            return
+
+    answers = intake.extract_answers(text, None)
+    updated, issue = intake.apply_answers(context, answers)
+    if updated or issue:
+        context["profile_confirmed"] = False
+        if issue and issue[0] in ("out_of_coverage", "district_unrecognised"):
+            context.pop("district", None)
+            context.pop("state", None)
+        _prompt_intake(db, beneficiary, context, lang, from_voice,
+                       prefix=intake.issue_message(issue, lang) if issue else "")
         return
 
-    try:
-        validate_project_cost(project_cost)
-    except ValueError as ve:
-        if lang == "kannada":
-            err_outlay = f"⚠️ {str(ve)}\nದಯವಿಟ್ಟು ₹5,000 ರಿಂದ ₹50,00,000 ಒಳಗೆ ಮಾನ್ಯವಾದ ಮೊತ್ತವನ್ನು ತಿಳಿಸಿ."
-        elif lang == "hindi":
-            err_outlay = f"⚠️ {str(ve)}\nकृपया ₹5,000 से ₹50,00,000 के बीच वैध परियोजना लागत बताएं।"
-        elif lang == "telugu":
-            err_outlay = f"⚠️ {str(ve)}\nదయచేసి ₹5,000 నుండి ₹50,00,000 మధ్య చెల్లుబాటు అయ్యే మొత్తాన్ని పేర్కొనండి."
-        elif lang == "marathi":
-            err_outlay = f"⚠️ {str(ve)}\nकृपया ₹5,000 ते ₹50,00,000 दरम्यान वैध प्रकल्प खर्च नमूद करा."
-        else:
-            err_outlay = f"⚠️ {str(ve)}\nPlease specify a viable project outlay between ₹5,000 and ₹50,00,000."
-        send_channel_text(beneficiary, err_outlay)
-        if from_voice:
-            _send_voice_audio_reply(beneficiary, err_outlay, lang)
+    if answers.get("confirmation") == "yes" and intake.next_missing(context) is None:
+        context["profile_confirmed"] = True
+        context["pending_field"] = None
+        context["awaiting_field_choice"] = False
+        _run_advisory(db, beneficiary, context, from_voice=from_voice)
         return
+
+    if answers.get("confirmation") == "no":
+        context["awaiting_field_choice"] = True
+        _save_context(db, beneficiary, context)
+        _send(beneficiary, intake.text_for(intake.MESSAGES["which_field"], lang), lang, from_voice)
+        return
+
+    field = intake.match_field_name(text)
+    if field:
+        intake.set_value(context, field, None)
+        context["profile_confirmed"] = False
+        _prompt_intake(db, beneficiary, context, lang, from_voice)
+        return
+
+    _prompt_intake(db, beneficiary, context, lang, from_voice,
+                   prefix=intake.text_for(intake.MESSAGES["not_understood"], lang))
+
+
+def _run_advisory(db, beneficiary, context: Dict[str, Any], from_voice: bool = False):
+    """Advisory from the confirmed applicant details only. Nothing here is assumed."""
+    lang = beneficiary.preferred_language or "english"
+    trade = context["trade"]
+    district = context["district"]
+    state = context["state"]
+    project_cost = float(context["project_cost"])
+    available_capital = context.get("available_capital")
+    profile = intake.profile_for_records(context)
+
+    beneficiary.full_name = profile.get("full_name")
+    beneficiary.annual_family_income = profile.get("annual_family_income")
 
     # 1. Deterministic financial calculation (NEVER LLM)
     fin_result = calculate_financial_structure(project_cost)
@@ -926,7 +955,8 @@ def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[st
         trade=trade,
         district=district,
         state=state,
-        available_capital=extracted.get("available_capital")
+        available_capital=available_capital,
+        profile=profile
     )
 
     # Update context & beneficiary record
@@ -946,8 +976,7 @@ def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[st
     beneficiary.state = state
     beneficiary.preferred_language = lang
     beneficiary.conversation_state = "CONFIRM_DPR"
-    beneficiary.conversation_context = context
-    db.commit()
+    _save_context(db, beneficiary, context)
 
     # Record or update an active DRAFT proposal for real-time admin visibility
     from app.db.models import EnterpriseProposal
@@ -988,21 +1017,20 @@ def _handle_extraction_and_advisory(db, beneficiary, text: str, context: Dict[st
         nabard_context=nabard_summary,
         language=lang,
         state=state,
-        available_capital=extracted.get("available_capital"),
+        available_capital=available_capital,
         multi_schemes=multi_schemes
     )
     if not bench["available"]:
         advisory = f"{advisory}\n\n{NO_BENCHMARK_NOTICE.get(lang, NO_BENCHMARK_NOTICE['english'])}"
 
-    send_channel_text(beneficiary, advisory)
-    if from_voice:
-        _send_voice_audio_reply(beneficiary, advisory, lang)
+    _send(beneficiary, advisory, lang, from_voice)
+
 
 def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
     """Compile Detailed Project Report PDF, upload to Cloudflare R2, and deliver link."""
     fin = context["financial_structure"]
     cashflows = context.get("cashflows", {})
-    trade = context.get("trade", "Rural Enterprise")
+    trade = context["trade"]
     lang = beneficiary.preferred_language or "kannada"
 
     # Find existing DRAFT proposal or create a new row
@@ -1039,14 +1067,17 @@ def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
 
     contact_id = beneficiary.telegram_chat_id if getattr(beneficiary, "primary_channel", "") == "telegram" else beneficiary.whatsapp_number
 
+    # Applicant details exactly as stated and confirmed in the conversation (never defaulted)
+    profile = intake.profile_for_records(context)
     beneficiary_dict = {
         "id": beneficiary.id,
-        "full_name": beneficiary.full_name or "Rural Entrepreneur",
+        "full_name": profile.get("full_name"),
         "whatsapp_number": contact_id,
-        "district": beneficiary.district or "Belagavi",
-        "state": beneficiary.state or "Karnataka",
+        "district": context.get("district"),
+        "state": context.get("state"),
         "preferred_language": beneficiary.preferred_language,
-        "annual_family_income": float(beneficiary.annual_family_income or 65000.0)
+        "annual_family_income": profile.get("annual_family_income"),
+        "profile": profile,
     }
 
     proposal_dict = {
@@ -1062,8 +1093,8 @@ def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
         "multi_schemes": context.get("multi_schemes") or {},
         "cashflows": context.get("cashflows") or {},
         "nabard_benchmark": context.get("nabard_benchmark") or "",
-        "district": beneficiary.district or context.get("district") or "Belagavi",
-        "state": beneficiary.state or context.get("state") or "Karnataka",
+        "district": context.get("district"),
+        "state": context.get("state"),
     }
 
     # Generate PDF

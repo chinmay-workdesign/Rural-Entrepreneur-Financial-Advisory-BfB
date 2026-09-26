@@ -958,12 +958,12 @@
             <div class="app-header">
               <div class="applicant-info">
                 <h2>
-                  <span>${p.beneficiary_name || 'Rural Entrepreneur'}</span>
+                  <span>${p.beneficiary_name || 'Name not provided'}</span>
                 </h2>
                 <div class="applicant-meta">
                   <span class="meta-item">📱 ${contactLabel}</span>
-                  <span class="meta-item">📍 ${p.district || 'Rural Dist'}, ${p.state || 'Karnataka'}</span>
-                  <span class="meta-item">🌐 Lang: ${(p.preferred_language || 'kannada').toUpperCase()}</span>
+                  <span class="meta-item">📍 ${p.district || 'District not provided'}${p.state ? ', ' + p.state : ''}</span>
+                  <span class="meta-item">🌐 Lang: ${(p.preferred_language || '—').toUpperCase()}</span>
                   <span class="meta-item">📅 ${p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN') : 'Recent'}</span>
                 </div>
               </div>
