@@ -1,0 +1,222 @@
+{
+  "metrics": {
+    "total_queries": 23,
+    "precision_at_1_pct": 100.0,
+    "precision_at_3_pct": 100.0,
+    "recall_at_5_pct": 100.0,
+    "page_accuracy_pct": 100.0,
+    "status_accuracy_pct": 100.0,
+    "avg_latency_ms": 24.62,
+    "max_latency_ms": 269.71,
+    "min_latency_ms": 9.77
+  },
+  "query_results": [
+    {
+      "id": "Q1",
+      "query": "2 cow dairy unit cost in Karnataka",
+      "latency_ms": 269.71,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.41, score=0.830)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q2",
+      "query": "Jersey cow model unit cost",
+      "latency_ms": 12.48,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.41, score=0.819)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q3",
+      "query": "cost of cattle shed for 2 crossbred cows",
+      "latency_ms": 10.32,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.41, score=0.823)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q4",
+      "query": "2000 broiler poultry integration unit cost",
+      "latency_ms": 10.36,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.50, score=0.838)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q5",
+      "query": "commercial 5000 broiler poultry farm project cost",
+      "latency_ms": 12.19,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.49, score=0.833)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q6",
+      "query": "mini flour mill total project cost 2020",
+      "latency_ms": 10.58,
+      "top1": "SAMADHAN_FLOUR_MILL_PROJECT_PROFILE (p.5, score=0.817)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q7",
+      "query": "flour mill plant and machinery equipment cost",
+      "latency_ms": 10.68,
+      "top1": "SAMADHAN_FLOUR_MILL_PROJECT_PROFILE (p.6, score=0.815)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q8",
+      "query": "flour mill manpower requirement and employee salaries",
+      "latency_ms": 10.28,
+      "top1": "SAMADHAN_FLOUR_MILL_PROJECT_PROFILE (p.4, score=0.875)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q9",
+      "query": "PMEGP rural special category margin money subsidy",
+      "latency_ms": 10.18,
+      "top1": "PMEGP_REVISED_GUIDELINES_2023 (p.4, score=0.844)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q10",
+      "query": "PMEGP manufacturing maximum project cost ceiling",
+      "latency_ms": 11.31,
+      "top1": "PMEGP_REVISED_GUIDELINES_2023 (p.4, score=0.753)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q11",
+      "query": "PMEGP minimum age and education qualification criteria",
+      "latency_ms": 9.84,
+      "top1": "PMEGP_REVISED_GUIDELINES_2023 (p.5, score=0.846)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q12",
+      "query": "PMEGP loan repayment tenure years",
+      "latency_ms": 9.85,
+      "top1": "PMEGP_REVISED_GUIDELINES_2023 (p.5, score=0.770)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q13",
+      "query": "rural incidence of indebtedness in Karnataka AIDIS",
+      "latency_ms": 64.67,
+      "top1": "AIDIS_NSS_77_REPORT_588 (p.92, score=0.896)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q14",
+      "query": "informal non-institutional moneylender interest rates in rural Karnataka",
+      "latency_ms": 10.54,
+      "top1": "AIDIS_NSS_77_REPORT_588 (p.97, score=0.875)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q15",
+      "query": "RBI priority sector lending targets for agriculture and micro enterprises",
+      "latency_ms": 9.77,
+      "top1": "RBI_PSL_MASTER_DIRECTIONS_2025 (p.10, score=0.831)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q16",
+      "query": "PMMY MUDRA refinance eligibility for partner banks",
+      "latency_ms": 11.35,
+      "top1": "PMMY_PARTNER_ELIGIBILITY (p.1, score=0.883)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q17",
+      "query": "sheep rearing unit cost in Karnataka Bannur breed 10 plus 1",
+      "latency_ms": 10.18,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.56, score=0.922)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q18",
+      "query": "goat rearing 10 does 1 buck improved breed unit cost",
+      "latency_ms": 11.17,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.60, score=0.850)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q19",
+      "query": "piggery 3 sows 1 boar fattening unit project cost",
+      "latency_ms": 10.04,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.64, score=0.850)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q20",
+      "query": "freshwater fish culture composite carp 1 hectare unit cost",
+      "latency_ms": 11.16,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.68, score=0.858)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q21",
+      "query": "beekeeping apiary 10 colony unit cost and honey extractor",
+      "latency_ms": 10.92,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.30, score=0.829)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q22",
+      "query": "sericulture mulberry garden establishment cost per hectare",
+      "latency_ms": 13.62,
+      "top1": "NABARD_KA_UC_BOOKLET_2026_27 (p.34, score=0.862)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    },
+    {
+      "id": "Q23",
+      "query": "All-India rural incidence of indebtedness and average amount of debt AIDIS",
+      "latency_ms": 15.18,
+      "top1": "AIDIS_NSS_77_REPORT_588 (p.92, score=0.903)",
+      "p1_match": true,
+      "page_match": true,
+      "status_match": true
+    }
+  ]
+}
