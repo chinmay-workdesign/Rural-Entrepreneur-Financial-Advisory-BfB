@@ -3,9 +3,9 @@ REAL_DATA_ONLY conversational and DPR behaviour.
 
 1. REAL_DATA_ONLY defaults to True
 2. Trade without an official benchmark: loan maths from the user's budget, no DSCR, explicit notice
-3. Verified NABARD trade: DSCR present, no notice
+3. Verified NABARD trade: NABARD unit cost quoted, no DSCR, no notice
 4. 'GENERATE DPR' without trade/district/budget asks for them instead of assuming values
-5. DPR PDF for a trade without an official benchmark omits DSCR projections
+5. DPR PDF for a trade without an official benchmark: no reference cost, no DSCR
 """
 import io
 import uuid
@@ -61,7 +61,7 @@ def test_no_benchmark_trade_gets_loan_maths_without_dscr():
         assert beneficiary.conversation_state == "CONFIRM_DPR"
         assert ctx["financial_structure"]["loan"] == 108000.0
         assert ctx["benchmark_available"] is False
-        assert ctx["cashflows"]["dscr"] is None
+        assert "dscr" not in ctx["cashflows"]
 
         proposals = [p for p in crud.get_proposals(db, status="DRAFT") if p.beneficiary_id == beneficiary.id]
         assert len(proposals) == 1
@@ -72,8 +72,8 @@ def test_no_benchmark_trade_gets_loan_maths_without_dscr():
     assert _has_notice(messages)
 
 
-# 3. Verified NABARD trade: DSCR present, no notice
-def test_verified_trade_keeps_dscr_and_has_no_notice():
+# 3. Verified NABARD trade: NABARD unit cost quoted, no DSCR, no notice
+def test_verified_trade_quotes_nabard_cost_and_has_no_notice():
     phone = _new_phone()
     messages = _run_to_advice(phone, "I want to start a dairy with 2 cows in Dharwad with ₹2,29,000")
 
@@ -81,11 +81,12 @@ def test_verified_trade_keeps_dscr_and_has_no_notice():
     try:
         ctx = crud.get_or_create_beneficiary(db, phone).conversation_context
         assert ctx["benchmark_available"] is True
-        assert ctx["cashflows"]["dscr"] is not None
+        assert "dscr" not in ctx["cashflows"]
     finally:
         db.close()
 
     assert not _has_notice(messages)
+    assert any("NABARD Karnataka 2026-27 unit cost" in m and "2,29,000" in m for m in messages)
 
 
 # 4. DPR request with nothing known: ask, never assume a budget
@@ -141,6 +142,6 @@ def test_dpr_pdf_without_benchmark_omits_dscr():
     compact = "".join(text.split())  # narrow table cells wrap words across lines
 
     assert "Not available" in text
-    assert "DSCR projections are not shown" in text
+    assert "Not computed" in text
     assert "Year 1 (70%)" not in text
     assert "DATA_NOT_AVAILABLE" in compact

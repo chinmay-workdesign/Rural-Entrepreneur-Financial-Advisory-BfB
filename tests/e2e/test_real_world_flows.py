@@ -292,7 +292,8 @@ def test_e2e_conversational_context_preservation():
     fin = b.conversation_context.get("financial_structure")
     assert fin["loan"] == 180000.0
     assert fin["margin"] == 20000.0
-    assert abs(fin["emi"] - 2966.97) < 1.0
+    assert fin["instalment_frequency"] == "QUARTERLY"
+    assert abs(fin["quarterly_instalment"] - 8945.86) < 1.0
     db.close()
 
 # ------------------------------------------------------------

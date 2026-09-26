@@ -21,7 +21,6 @@ from app.ai.extraction import extract_entrepreneur_details, generate_advisory_me
 from app.dialogue import intake
 from app.finance.benchmarks import get_trade_benchmark
 from app.finance.calculator import calculate_financial_structure, validate_project_cost
-from app.finance.dscr import project_financial_cashflows
 from app.dpr.generator import generate_dpr_pdf
 from app.storage import save_dpr_pdf, upload_dpr_pdf
 
@@ -686,7 +685,9 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
     if state == "CONFIRM_PROFILE":
         _handle_profile_confirmation(db, beneficiary, text_clean, context, from_voice=from_voice)
         return
-    if state == "COLLECTING" and context.get("pending_field"):
+    # Statements such as "dairy in Belagavi, cost 2 lakh" are details, not factual questions; only a message
+    # that looks like a question (with no question pending) goes straight to the factual router.
+    if state in ("COLLECTING", "GREETING") and (context.get("pending_field") or not _looks_like_question(text_clean)):
         if _handle_intake_turn(db, beneficiary, text_clean, context, from_voice=from_voice, allow_passthrough=True):
             return
 
@@ -941,14 +942,8 @@ def _run_advisory(db, beneficiary, context: Dict[str, Any], from_voice: bool = F
     beneficiary.full_name = profile.get("full_name")
     beneficiary.annual_family_income = profile.get("annual_family_income")
 
-    # 1. Deterministic financial calculation (NEVER LLM)
-    fin_result = calculate_financial_structure(project_cost)
-
-    # 2 & 3. Project cash flows, then apply the NABARD / official trade benchmark (DSCR omitted if none exists)
-    cashflows = project_financial_cashflows(project_cost, fin_result["emi"])
-    bench = _resolve_trade_benchmark(trade, district, cashflows)
-    nabard_summary = bench["summary"]
-
+    # 1. Schemes for this applicant, from verified rules only (NEVER LLM):
+    #    corporation loan for the stated category, PMEGP for category/area, MUDRA loan categories
     from app.finance.multi_schemes import get_all_eligible_schemes
     multi_schemes = get_all_eligible_schemes(
         cost=project_cost,
@@ -958,17 +953,22 @@ def _run_advisory(db, beneficiary, context: Dict[str, Any], from_voice: bool = F
         available_capital=available_capital,
         profile=profile
     )
+    fin_result = multi_schemes["primary_sca"]
 
-    # Update context & beneficiary record
+    # 2. NABARD unit cost for reference. No DSCR or cash-flow projection is produced: no official source
+    #    gives revenue or operating costs for these trades, so any such figure would be invented.
+    benchmark = get_trade_benchmark(trade, district)
+    benchmark_available = benchmark.get("status") != "DATA_NOT_AVAILABLE"
+
     context.update({
         "trade": trade,
         "district": district,
         "state": state,
         "project_cost": project_cost,
         "financial_structure": fin_result,
-        "cashflows": cashflows,
-        "nabard_benchmark": nabard_summary,
-        "benchmark_available": bench["available"],
+        "cashflows": {},
+        "nabard_benchmark": benchmark.get("summary") if benchmark_available else NO_BENCHMARK_LLM_CONTEXT,
+        "benchmark_available": benchmark_available,
         "multi_schemes": multi_schemes
     })
 
@@ -979,6 +979,15 @@ def _run_advisory(db, beneficiary, context: Dict[str, Any], from_voice: bool = F
     _save_context(db, beneficiary, context)
 
     # Record or update an active DRAFT proposal for real-time admin visibility
+    proposal_fields = {
+        "business_trade": trade,
+        "scheme_tier": fin_result["scheme"],
+        "project_cost": project_cost,
+        "sanctioned_loan": fin_result.get("loan") or 0.0,
+        "beneficiary_margin": fin_result.get("margin") or 0.0,
+        "monthly_emi": fin_result.get("emi") or 0.0,
+        "projected_dscr": None,
+    }
     from app.db.models import EnterpriseProposal
     existing_p = (
         db.query(EnterpriseProposal)
@@ -987,40 +996,24 @@ def _run_advisory(db, beneficiary, context: Dict[str, Any], from_voice: bool = F
         .first()
     )
     if existing_p and existing_p.status == "DRAFT":
-        existing_p.business_trade = trade
-        existing_p.scheme_tier = fin_result["scheme"]
-        existing_p.project_cost = fin_result["cost"]
-        existing_p.sanctioned_loan = fin_result["loan"]
-        existing_p.beneficiary_margin = fin_result["margin"]
-        existing_p.monthly_emi = fin_result["emi"]
-        existing_p.projected_dscr = cashflows.get("dscr")
+        for key, value in proposal_fields.items():
+            setattr(existing_p, key, value)
         db.commit()
     else:
-        crud.create_proposal(db, {
-            "beneficiary_id": beneficiary.id,
-            "business_trade": trade,
-            "scheme_tier": fin_result["scheme"],
-            "project_cost": fin_result["cost"],
-            "sanctioned_loan": fin_result["loan"],
-            "beneficiary_margin": fin_result["margin"],
-            "monthly_emi": fin_result["emi"],
-            "projected_dscr": cashflows.get("dscr"),
-            "status": "DRAFT",
-            "dpr_pdf_url": None
-        })
+        crud.create_proposal(db, {"beneficiary_id": beneficiary.id, "status": "DRAFT", "dpr_pdf_url": None, **proposal_fields})
 
-    # 4. Synthesize structured multi-scheme advisory text via Gemini/LLM
+    # 3. Advisory text assembled from the verified results in the user's language
     advisory = generate_advisory_message(
-        financial_data=fin_result,
+        financial_data={"cost": project_cost},
         trade=trade,
         district=district,
-        nabard_context=nabard_summary,
         language=lang,
         state=state,
         available_capital=available_capital,
-        multi_schemes=multi_schemes
+        multi_schemes=multi_schemes,
+        benchmark=benchmark if benchmark_available else None,
     )
-    if not bench["available"]:
+    if not benchmark_available:
         advisory = f"{advisory}\n\n{NO_BENCHMARK_NOTICE.get(lang, NO_BENCHMARK_NOTICE['english'])}"
 
     _send(beneficiary, advisory, lang, from_voice)
@@ -1041,29 +1034,21 @@ def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
         .order_by(EnterpriseProposal.created_at.desc())
         .first()
     )
+    proposal_fields = {
+        "business_trade": trade,
+        "scheme_tier": fin["scheme"],
+        "project_cost": float(context["project_cost"]),
+        "sanctioned_loan": fin.get("loan") or 0.0,
+        "beneficiary_margin": fin.get("margin") or 0.0,
+        "monthly_emi": fin.get("emi") or 0.0,
+        "projected_dscr": None,
+    }
     if proposal and proposal.status == "DRAFT":
-        proposal.business_trade = trade
-        proposal.scheme_tier = fin["scheme"]
-        proposal.project_cost = fin["cost"]
-        proposal.sanctioned_loan = fin["loan"]
-        proposal.beneficiary_margin = fin["margin"]
-        proposal.monthly_emi = fin["emi"]
-        proposal.projected_dscr = cashflows.get("dscr")
+        for key, value in proposal_fields.items():
+            setattr(proposal, key, value)
         db.commit()
     else:
-        proposal_data = {
-            "beneficiary_id": beneficiary.id,
-            "business_trade": trade,
-            "scheme_tier": fin["scheme"],
-            "project_cost": fin["cost"],
-            "sanctioned_loan": fin["loan"],
-            "beneficiary_margin": fin["margin"],
-            "monthly_emi": fin["emi"],
-            "projected_dscr": cashflows.get("dscr"),
-            "status": "DRAFT",
-            "dpr_pdf_url": None
-        }
-        proposal = crud.create_proposal(db, proposal_data)
+        proposal = crud.create_proposal(db, {"beneficiary_id": beneficiary.id, "status": "DRAFT", "dpr_pdf_url": None, **proposal_fields})
 
     contact_id = beneficiary.telegram_chat_id if getattr(beneficiary, "primary_channel", "") == "telegram" else beneficiary.whatsapp_number
 
@@ -1091,6 +1076,7 @@ def _handle_dpr_generation(db, beneficiary, context: Dict[str, Any]):
         "projected_dscr": float(proposal.projected_dscr) if proposal.projected_dscr is not None else None,
         "status": proposal.status,
         "multi_schemes": context.get("multi_schemes") or {},
+        "financial_structure": fin,
         "cashflows": context.get("cashflows") or {},
         "nabard_benchmark": context.get("nabard_benchmark") or "",
         "district": context.get("district"),

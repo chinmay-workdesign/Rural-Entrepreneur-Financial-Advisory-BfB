@@ -10,6 +10,17 @@ def offline_gemini(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def offline_tts(monkeypatch):
+    """No network text-to-speech in tests; synthesize_speech falls back to its built-in test audio."""
+    import gtts
+
+    def _unavailable(*args, **kwargs):
+        raise RuntimeError("gTTS disabled in tests")
+
+    monkeypatch.setattr(gtts, "gTTS", _unavailable)
+
+
+@pytest.fixture(autouse=True)
 def setup_test_db():
     init_db()
     # Mock outbound network calls during automated test suite runs

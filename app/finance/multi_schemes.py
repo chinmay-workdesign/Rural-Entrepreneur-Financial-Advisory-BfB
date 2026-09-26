@@ -1,6 +1,41 @@
 from typing import Dict, Any, List, Optional
 from app.finance.calculator import calculate_financial_structure
 from app.finance.pmegp import compute_pmegp
+from app.finance.corporation_loans import compute_corporation_loan
+
+def compute_mudra(cost: float) -> Dict[str, Any]:
+    """
+    MUDRA loan categories (PIB, 29 Oct 2024). The loan amount is decided by the bank and cannot exceed the
+    project cost, so the category is given for a loan up to the project cost. No rate or margin is stated
+    by the source, so none is shown.
+    """
+    import json, os
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                        "data", "processed", "schemes", "pmmy_pib_2024_rules.json")
+    rules = {r["rule_id"]: r for r in json.load(open(path, encoding="utf-8"))["rules"]}
+    bands = [("Shishu", 0.0, rules["PMMY_SHISHU"]["value"]),
+             ("Kishore", rules["PMMY_SHISHU"]["value"], rules["PMMY_KISHORE"]["value"]),
+             ("Tarun", rules["PMMY_KISHORE"]["value"], rules["PMMY_TARUN"]["value"]),
+             ("Tarun Plus", rules["PMMY_TARUN"]["value"], rules["PMMY_TARUN_PLUS"]["value"])]
+    possible = [name for name, low, high in bands if cost > low]
+    top = possible[-1] if possible else "Shishu"
+    return {
+        "name": "Pradhan Mantri MUDRA Yojana (PMMY)",
+        "tier": top,
+        "possible_tiers": possible,
+        "max_loan": min(cost, rules["PMMY_TARUN_PLUS"]["value"]),
+        "tarun_plus_condition": top == "Tarun Plus",
+        "collateral": "Collateral-free; guaranteed under CGFMU",
+        "interest_rate": None,
+        "margin_money": None,
+        "source_id": "PIB_PMMY_LIMIT_20_LAKH_2024",
+        "source_organization": "Ministry of Finance (PIB), 29 October 2024",
+        "source_page": 3,
+        "verification_status": "VERIFIED_OFFICIAL",
+        "not_specified": ["interest rate", "own contribution"],
+        "how_to_redeem": ["Apply at any bank branch, or online through the Udyamimitra portal."],
+    }
+
 
 def get_sector_specific_scheme(trade: str, cost: float, district: str) -> Optional[Dict[str, Any]]:
     """Determine sectoral/trade-specific government scheme based on business type."""
@@ -94,58 +129,17 @@ def get_all_eligible_schemes(
       - pmegp: Prime Minister's Employment Generation Programme, computed from the applicant profile
       - sectoral: Sector/Trade specific scheme if applicable
     """
-    # 1. Primary SCA Scheme (MFS or TLS)
-    primary_calc = calculate_financial_structure(cost)
+    # 1. Concessional loan from the corporation serving the applicant's category (verified rules)
+    primary_calc = compute_corporation_loan(cost, profile)
 
-    # 2. PMMY Scheme Tier
-    if cost <= 50000:
-        mudra_tier = "Shishu"
-        mudra_loan = cost
-        mudra_margin = 0.0
-        mudra_margin_pct = 0
-        mudra_rate = "8.5% - 9.5%"
-    elif cost <= 500000:
-        mudra_tier = "Kishore"
-        mudra_loan = cost * 0.85
-        mudra_margin = cost * 0.15
-        mudra_margin_pct = 15
-        mudra_rate = "9.5% - 10.5%"
-    else:
-        mudra_tier = "Tarun"
-        mudra_loan = min(cost * 0.85, 1000000.0)
-        mudra_margin = cost - mudra_loan
-        mudra_margin_pct = int(round((mudra_margin / cost) * 100))
-        mudra_rate = "10.0% - 11.5%"
-
-    mudra_scheme = {
-        "name": f"Pradhan Mantri MUDRA Yojana (PMMY) - {mudra_tier}",
-        "tier": mudra_tier,
-        "type": "Zero-Collateral Commercial Bank Loan",
-        "loan_amount": mudra_loan,
-        "margin_money": mudra_margin,
-        "margin_pct": mudra_margin_pct,
-        "interest_rate": f"{mudra_rate} p.a.",
-        "tenure": "36 to 60 months",
-        "source_id": "PMMY_PARTNER_ELIGIBILITY",
-        "source_organization": "Micro Units Development & Refinance Agency (MUDRA)",
-        "source_page": None,
-        "verification_status": "NEEDS_SOURCE_VERIFICATION",
-        "source_type": "UNVERIFIED_POLICY_GUIDELINE",
-        "provenance_note": "Borrower loan tiers (Shishu/Kishore/Tarun) reflect standard banking practice; awaiting formal Ministry circular in repository.",
-        "highlights": "No collateral or third-party guarantor required. Covered under CGFMU government credit guarantee. Includes MUDRA RuPay Card.",
-        "how_to_redeem": [
-            "Apply online through the government JanSamarth Portal (www.jansamarth.in) or UdyamiMitra Portal (www.udyamimitra.in).",
-            "Alternatively, walk into any Public Sector Bank (SBI, Canara Bank, BoB), Regional Rural Bank (Karnataka Gramin Bank), or local Bank branch in " + (district or "your district") + ".",
-            "Submit your KYC (Aadhaar, PAN), Bank Passbook copy, Udyam Registration (free online), and the DPR generated here.",
-            "Loan is sanctioned and credited into your account with MUDRA RuPay card."
-        ]
-    }
+    # 2. PMMY / MUDRA: loan categories from the PIB notification; the bank decides amount, rate and margin
+    mudra_scheme = compute_mudra(cost)
 
     # 3. PMEGP (KVIC/KVIB/DIC): rates depend on the applicant's stated category and area (verified guideline rules)
     pmegp_scheme = compute_pmegp(cost, trade, profile)
 
-    # 4. Sectoral Scheme (if matching)
-    sectoral_scheme = get_sector_specific_scheme(trade or "", cost, district or "your district")
+    # 4. Trade-specific schemes are not shown: none of their terms is verified from an official source yet.
+    sectoral_scheme = None
 
     return {
         "cost": cost,
@@ -153,6 +147,7 @@ def get_all_eligible_schemes(
         "district": district,
         "state": state,
         "available_capital": available_capital,
+        "profile": profile or {},
         "primary_sca": primary_calc,
         "mudra": mudra_scheme,
         "pmegp": pmegp_scheme,

@@ -33,7 +33,7 @@ def test_full_dialogue_to_sanction_flow():
 
         fin = beneficiary.conversation_context.get("financial_structure")
         assert fin is not None
-        assert fin["scheme"] == "MICRO_FINANCE"
+        assert fin["scheme"] == "NSFDC_MICRO_FINANCE"
         assert fin["cost"] == 120000.0
         assert fin["loan"] == 108000.0
         assert fin["margin"] == 12000.0
@@ -158,7 +158,7 @@ def test_telugu_and_marathi_advisory_generation():
         language="telugu",
         state="Andhra Pradesh"
     )
-    assert "150,000" in adv_te
+    assert "1,50,000" in adv_te
     assert "GENERATE DPR" in adv_te
     assert sum(1 for c in adv_te if 0x0C00 <= ord(c) <= 0x0C7F) > 50
 
@@ -170,7 +170,7 @@ def test_telugu_and_marathi_advisory_generation():
         language="marathi",
         state="Maharashtra"
     )
-    assert "150,000" in adv_mr
+    assert "1,50,000" in adv_mr
     assert "GENERATE DPR" in adv_mr
     assert sum(1 for c in adv_mr if 0x0900 <= ord(c) <= 0x097F) > 50
 

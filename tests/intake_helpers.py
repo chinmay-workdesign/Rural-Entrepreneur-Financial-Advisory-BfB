@@ -10,7 +10,7 @@ DEFAULT_ANSWERS: Dict[str, str] = {
     "full_name": "Ramesh Kumar",
     "gender": "man",
     "age": "35",
-    "social_category": "OBC",
+    "social_category": "SC",
     "area_type": "village",
     "annual_family_income": "1.5 lakh",
     "available_capital": "20000",

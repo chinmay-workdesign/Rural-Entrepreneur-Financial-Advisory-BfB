@@ -102,13 +102,16 @@ def test_pmegp_without_profile_shows_no_subsidy_figure():
     assert pmegp["subsidy_pct"] is None
     assert pmegp["subsidy_amount"] is None
 
-# 9. PMMY unverified values cannot enter authoritative calculations
+# 9. PMMY: only the verified loan categories; no invented rate or loan share
 def test_pmmy_unverified_values_cannot_enter_authoritative_calculations():
     schemes = get_all_eligible_schemes(cost=200000.0, district="Belagavi")
     mudra = schemes["mudra"]
-    assert mudra["verification_status"] == "NEEDS_SOURCE_VERIFICATION"
-    assert mudra["source_type"] == "UNVERIFIED_POLICY_GUIDELINE"
-    assert "awaiting formal Ministry circular" in mudra["provenance_note"]
+    assert mudra["source_id"] == "PIB_PMMY_LIMIT_20_LAKH_2024"
+    assert mudra["possible_tiers"] == ["Shishu", "Kishore"]
+    # The source fixes no borrower interest rate or margin, so none is produced
+    assert mudra["interest_rate"] is None
+    assert mudra["margin_money"] is None
+    assert "loan_amount" not in mudra
 
 # 10. Derived EMI has no fake source citation
 def test_derived_emi_has_no_fake_source_citation():
