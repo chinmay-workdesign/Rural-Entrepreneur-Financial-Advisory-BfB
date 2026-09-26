@@ -255,3 +255,15 @@ MESSAGES["almost_done"] = {
     "english": "📌 *Almost done:*", "hindi": "📌 *लगभग पूरा:*", "kannada": "📌 *ಬಹುತೇಕ ಮುಗಿಯಿತು:*",
     "telugu": "📌 *దాదాపు పూర్తయింది:*", "marathi": "📌 *जवळजवळ पूर्ण:*",
 }
+
+MESSAGES["mentioned_header"] = {
+    "english": "📝 *You already mentioned:*", "hindi": "📝 *आपने पहले बताया था:*", "kannada": "📝 *ನೀವು ಈಗಾಗಲೇ ತಿಳಿಸಿದ್ದೀರಿ:*",
+    "telugu": "📝 *మీరు ఇప్పటికే చెప్పారు:*", "marathi": "📝 *आपण आधी सांगितले होते:*",
+}
+MESSAGES["mentioned_footer"] = {
+    "english": "Say *yes* to keep these, or tell me the correct values.",
+    "hindi": "इन्हें रखने के लिए *हाँ* बोलें, या सही जानकारी बताएं।",
+    "kannada": "ಇವನ್ನು ಉಳಿಸಲು *ಹೌದು* ಎಂದು ಹೇಳಿ, ಅಥವಾ ಸರಿಯಾದ ವಿವರ ತಿಳಿಸಿ.",
+    "telugu": "వీటిని ఉంచడానికి *అవును* అని చెప్పండి, లేదా సరైన వివరాలు చెప్పండి.",
+    "marathi": "हे ठेवण्यासाठी *होय* सांगा, किंवा योग्य माहिती सांगा.",
+}

@@ -98,9 +98,17 @@ def next_prompt(context: Dict[str, Any], lang: str) -> Optional[Tuple[str, List[
         return None
     group, needed, missing = nxt
     if group in GROUP_QUESTIONS and missing == needed:
-        return text_for(GROUP_QUESTIONS[group], lang), missing
-    header = text_for(MESSAGES["almost_done" if group == "extra" and missing == needed else "also_tell"], lang)
-    return header + "\n\n" + "\n\n".join(question(f, lang) for f in missing), missing
+        text = text_for(GROUP_QUESTIONS[group], lang)
+    else:
+        header = text_for(MESSAGES["almost_done" if group == "extra" and missing == needed else "also_tell"], lang)
+        text = header + "\n\n" + "\n\n".join(question(f, lang) for f in missing)
+    volunteered = context.get("volunteered") or {}
+    mentioned = [f for f in missing if f in volunteered]
+    if mentioned:
+        lines = [f"• {text_for(LABELS[f], lang)}: {display_value(f, volunteered[f], lang)}" for f in mentioned]
+        text += ("\n\n" + text_for(MESSAGES["mentioned_header"], lang) + "\n" + "\n".join(lines) + "\n"
+                 + text_for(MESSAGES["mentioned_footer"], lang))
+    return text, missing
 
 
 # ---------------- reading answers ----------------
@@ -263,10 +271,11 @@ def _rule_based_extract(text: str, pending: List[str]) -> Dict[str, Any]:
         return data
 
     data: Dict[str, Any] = {}
-    # A correction such as "age 35" or "ಆದಾಯ 2 ಲಕ್ಷ": field name plus value
-    named = match_field_name(text)
-    if named and named != "full_name":
-        data[named] = _parse_field(named, text)
+    # Labelled values such as "age 35", "ಆದಾಯ 2 ಲಕ್ಷ" or "own money 50000", each read from its own part
+    for seg in _segments(text):
+        named = match_field_name(seg)
+        if named and named != "full_name" and data.get(named) is None:
+            data[named] = _parse_field(named, seg)
     # An opening message such as "dairy in Belagavi, project cost 2 lakh"
     from app.ai.extraction import fallback_regex_extractor
     opening = fallback_regex_extractor(text)
@@ -324,7 +333,10 @@ def extract_answers(text: str, pending: Any) -> Dict[str, Any]:
     pending_list: List[str] = [pending] if isinstance(pending, str) else list(pending or [])
     gemini = _gemini_extract(text, pending_list)
     if gemini is None:
-        return _clean(_rule_based_extract(text, pending_list))
+        data = _clean(_rule_based_extract(text, pending_list))
+        if data.get("confirmation") is None:
+            data["confirmation"] = P.parse_yes_no(text)
+        return data
 
     data = _clean(gemini)
     if pending_list and any(data.get(f) is None for f in pending_list):
@@ -341,21 +353,37 @@ def extract_answers(text: str, pending: Any) -> Dict[str, Any]:
 
 # ---------------- applying answers ----------------
 
-def apply_answers(context: Dict[str, Any], data: Dict[str, Any]) -> Tuple[List[str], Optional[Tuple[str, str]]]:
+def apply_answers(context: Dict[str, Any], data: Dict[str, Any],
+                  asked: Optional[List[str]] = None) -> Tuple[List[str], Optional[Tuple[str, str]]]:
     """
     Stores the stated values. Returns (updated field names, issue) where issue is
     ("out_of_coverage", place), ("district_unrecognised", place) or ("invalid_cost", "").
+
+    `asked` lists the questions this message answers. A value for a question not yet asked is kept aside in
+    context["volunteered"] and not used: that question is still asked later, showing what was mentioned.
+    A change to a value that was already collected is a correction and applies directly.
+    asked=None (corrections at the summary) applies everything.
     """
     updated: List[str] = []
     issue: Optional[Tuple[str, str]] = None
+    volunteered = dict(context.get("volunteered") or {})
+
+    def _held(field: str, value: Any) -> bool:
+        """True when the value must wait for its own question."""
+        if asked is None or field in asked or get_value(context, field) is not None:
+            volunteered.pop(field, None)
+            return False
+        volunteered[field] = value
+        return True
 
     district_text, state_text = data.get("district"), data.get("state")
     if district_text or (state_text and state_text.strip().lower() != "karnataka"):
         canonical = P.normalize_district(district_text or "")
         if canonical and (not state_text or state_text.strip().lower() == "karnataka"):
-            if context.get("district") != canonical:
-                updated.append("district")
-            context["district"], context["state"] = canonical, "Karnataka"
+            if not _held("district", canonical):
+                if context.get("district") != canonical:
+                    updated.append("district")
+                context["district"], context["state"] = canonical, "Karnataka"
         elif (state_text and state_text.strip().lower() != "karnataka") or P.mentions_outside_karnataka(district_text or ""):
             issue = ("out_of_coverage", district_text or state_text)
         else:
@@ -364,19 +392,37 @@ def apply_answers(context: Dict[str, Any], data: Dict[str, Any]) -> Tuple[List[s
     cost = data.get("project_cost")
     if cost is not None:
         if MIN_PROJECT_COST <= cost <= TLS_MAX_COST:
-            if context.get("project_cost") != cost:
-                updated.append("project_cost")
-            context["project_cost"] = cost
+            if not _held("project_cost", cost):
+                if context.get("project_cost") != cost:
+                    updated.append("project_cost")
+                context["project_cost"] = cost
         else:
             issue = issue or ("invalid_cost", "")
 
     for field in ("trade", "available_capital", "full_name", "gender", "age", "social_category", "area_type",
                   "annual_family_income", "special_status", "education_8th_pass"):
         value = data.get(field)
-        if value is not None and get_value(context, field) != value:
+        if value is not None and not _held(field, value) and get_value(context, field) != value:
             set_value(context, field, value)
             updated.append(field)
+    context["volunteered"] = volunteered
     return updated, issue
+
+
+def accept_volunteered(context: Dict[str, Any], fields: List[str]) -> List[str]:
+    """The user said "yes" to what they had already mentioned for the questions just asked."""
+    volunteered = dict(context.get("volunteered") or {})
+    accepted = []
+    for field in fields:
+        if field in volunteered and get_value(context, field) is None:
+            value = volunteered.pop(field)
+            if field == "district":
+                context["district"], context["state"] = value, "Karnataka"
+            else:
+                set_value(context, field, value)
+            accepted.append(field)
+    context["volunteered"] = volunteered
+    return accepted
 
 
 def issue_message(issue: Tuple[str, str], lang: str) -> str:

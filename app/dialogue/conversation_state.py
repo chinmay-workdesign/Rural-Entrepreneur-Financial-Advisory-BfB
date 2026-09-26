@@ -861,8 +861,15 @@ def _handle_intake_turn(db, beneficiary, text: str, context: Dict[str, Any], fro
     """
     lang = beneficiary.preferred_language or "english"
     pending = context.get("pending_fields") or ([context["pending_field"]] if context.get("pending_field") else [])
+    # Before any question is pending, the greeting has asked for the business, district and total cost
+    asked = pending or list(intake.GROUPS[0][1])
     answers = intake.extract_answers(text, pending)
-    updated, issue = intake.apply_answers(context, answers)
+    had_volunteered = dict(context.get("volunteered") or {})
+    updated, issue = intake.apply_answers(context, answers, asked=asked)
+    if answers.get("confirmation") == "yes":
+        updated += intake.accept_volunteered(context, asked)
+    if not updated and context.get("volunteered") != had_volunteered:
+        updated = ["volunteered"]  # something was mentioned for a later question: carry on asking
     logger.info(f"Intake answers: updated={updated} issue={issue}")
 
     if updated:

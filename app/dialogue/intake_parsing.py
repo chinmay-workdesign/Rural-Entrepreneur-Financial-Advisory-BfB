@@ -209,13 +209,16 @@ def parse_name(text: str) -> Optional[str]:
     words = name.split()
     if not 1 <= len(words) <= 6 or len(name) > 80:
         return None
+    # "yes", "ಹೌದು", "नहीं" and similar replies are answers, never names
+    if all(w in _YES or w in _NO for w in tokens(name)):
+        return None
     return " ".join(w.capitalize() if w.isascii() else w for w in words)
 
 
 # ---------------- Karnataka districts ----------------
 
 KARNATAKA_DISTRICTS: Dict[str, List[str]] = {
-    "Bagalkote": ["bagalkote", "bagalkot", "ಬಾಗಲಕೋಟೆ", "ಬಾಗಲಕೋಟ", "बागलकोट"],
+    "Bagalkote": ["bagalkote", "bagalkot", "ಬಾಗಲಕೋಟೆ", "ಬಾಗಲಕೋಟ", "बागलकोट", "बागलकोटे"],
     "Ballari": ["ballari", "bellary", "ಬಳ್ಳಾರಿ", "बल्लारी", "बेल्लारी", "బళ్లారి"],
     "Belagavi": ["belagavi", "belgaum", "belgavi", "ಬೆಳಗಾವಿ", "ಬೆಳಗಾಂ", "बेलगावी", "बेळगाव", "बेलगाम",
                  "बेलगांव", "బెళగావి", "బెల్గాం"],
@@ -223,34 +226,34 @@ KARNATAKA_DISTRICTS: Dict[str, List[str]] = {
     "Bengaluru Urban": ["bengaluru urban", "bangalore urban", "bengaluru", "bangalore", "ಬೆಂಗಳೂರು ನಗರ",
                         "ಬೆಂಗಳೂರು", "बेंगलुरु", "बेंगलूरु", "बंगलौर", "बंगळूर", "బెంగళూరు"],
     "Bidar": ["bidar", "ಬೀದರ್", "ಬೀದರ", "बीदर", "బీదర్"],
-    "Chamarajanagar": ["chamarajanagar", "chamarajanagara", "ಚಾಮರಾಜನಗರ", "चामराजनगर"],
-    "Chikkaballapur": ["chikkaballapur", "chikkaballapura", "chickballapur", "ಚಿಕ್ಕಬಳ್ಳಾಪುರ", "चिक्कबल्लापुर"],
-    "Chikkamagaluru": ["chikkamagaluru", "chikmagalur", "chikkamagalur", "ಚಿಕ್ಕಮಗಳೂರು", "चिकमंगलूर"],
-    "Chitradurga": ["chitradurga", "ಚಿತ್ರದುರ್ಗ", "चित्रदुर्ग", "చిత్రదుర్గ"],
+    "Chamarajanagar": ["chamarajanagar", "chamarajanagara", "ಚಾಮರಾಜನಗರ", "चामराजनगर", "चामराजनगरा"],
+    "Chikkaballapur": ["chikkaballapur", "chikkaballapura", "chickballapur", "ಚಿಕ್ಕಬಳ್ಳಾಪುರ", "चिक्कबल्लापुर", "चिकबल्लापुर"],
+    "Chikkamagaluru": ["chikkamagaluru", "chikmagalur", "chikkamagalur", "ಚಿಕ್ಕಮಗಳೂರು", "चिकमंगलूर", "चिक्कमगलूर", "चिकमगलूर"],
+    "Chitradurga": ["chitradurga", "ಚಿತ್ರದುರ್ಗ", "चित्रदुर्ग", "चित्रदुर्गा", "చిత్రదుర్గ"],
     "Dakshina Kannada": ["dakshina kannada", "south canara", "mangaluru", "mangalore", "ದಕ್ಷಿಣ ಕನ್ನಡ",
                          "ಮಂಗಳೂರು", "दक्षिण कन्नड", "मंगलुरु", "मंगलोर"],
     "Davanagere": ["davanagere", "davangere", "ದಾವಣಗೆರೆ", "दावणगेरे"],
     "Dharwad": ["dharwad", "dharwar", "hubballi", "hubli", "ಧಾರವಾಡ", "ಹುಬ್ಬಳ್ಳಿ", "धारवाड", "धारवाड़",
                 "हुबली", "ధార్వాడ్"],
-    "Gadag": ["gadag", "ಗದಗ", "गदग"],
-    "Hassan": ["hassan", "ಹಾಸನ", "हासन"],
-    "Haveri": ["haveri", "ಹಾವೇರಿ", "हावेरी"],
+    "Gadag": ["gadag", "ಗದಗ", "गदग", "गडग"],
+    "Hassan": ["hassan", "ಹಾಸನ", "हासन", "हसन"],
+    "Haveri": ["haveri", "ಹಾವೇರಿ", "हावेरी", "हावेरि"],
     "Kalaburagi": ["kalaburagi", "gulbarga", "ಕಲಬುರಗಿ", "ಗುಲ್ಬರ್ಗಾ", "कलबुर्गी", "गुलबर्गा", "కలబురగి", "గుల్బర్గా"],
     "Kodagu": ["kodagu", "coorg", "madikeri", "ಕೊಡಗು", "ಮಡಿಕೇರಿ", "कोडगु", "कूर्ग"],
     "Kolar": ["kolar", "ಕೋಲಾರ", "कोलार", "కోలార్"],
-    "Koppal": ["koppal", "ಕೊಪ್ಪಳ", "कोप्पल"],
+    "Koppal": ["koppal", "ಕೊಪ್ಪಳ", "कोप्पल", "कोप्पळ"],
     "Mandya": ["mandya", "ಮಂಡ್ಯ", "मंड्या", "मांड्या"],
     "Mysuru": ["mysuru", "mysore", "ಮೈಸೂರು", "मैसूरु", "मैसूर", "म्हैसूर", "మైసూరు"],
     "Raichur": ["raichur", "ರಾಯಚೂರು", "रायचूर", "రాయచూర్"],
     "Ramanagara": ["ramanagara", "ramanagaram", "bengaluru south", "ರಾಮನಗರ", "ಬೆಂಗಳೂರು ದಕ್ಷಿಣ", "रामनगर"],
-    "Shivamogga": ["shivamogga", "shimoga", "ಶಿವಮೊಗ್ಗ", "शिवमोग्गा", "शिमोगा"],
-    "Tumakuru": ["tumakuru", "tumkur", "ತುಮಕೂರು", "तुमकुरु", "तुमकूर"],
-    "Udupi": ["udupi", "ಉಡುಪಿ", "उडुपी"],
+    "Shivamogga": ["shivamogga", "shimoga", "ಶಿವಮೊಗ್ಗ", "शिवमोग्गा", "शिमोगा", "शिवमोगा"],
+    "Tumakuru": ["tumakuru", "tumkur", "ತುಮಕೂರು", "तुमकुरु", "तुमकूर", "तुमकुर", "तुमकूरु"],
+    "Udupi": ["udupi", "ಉಡುಪಿ", "उडुपी", "उडुपि"],
     "Uttara Kannada": ["uttara kannada", "north canara", "karwar", "ಉತ್ತರ ಕನ್ನಡ", "ಕಾರವಾರ", "उत्तर कन्नड",
                        "कारवार"],
     "Vijayanagara": ["vijayanagara", "hosapete", "hospet", "ವಿಜಯನಗರ", "ಹೊಸಪೇಟೆ", "होसपेट"],
-    "Vijayapura": ["vijayapura", "bijapur", "ವಿಜಯಪುರ", "ಬಿಜಾಪುರ", "विजयपुरा", "बीजापुर", "విజయపుర"],
-    "Yadgir": ["yadgir", "yadagiri", "ಯಾದಗಿರಿ", "यादगीर", "యాద్గిర్"],
+    "Vijayapura": ["vijayapura", "bijapur", "ವಿಜಯಪುರ", "ಬಿಜಾಪುರ", "विजयपुरा", "बीजापुर", "विजयपुर", "విజయపుర"],
+    "Yadgir": ["yadgir", "yadagiri", "ಯಾದಗಿರಿ", "यादगीर", "यादगिर", "యాద్గిర్"],
 }
 
 # Places outside Karnataka that users in border areas commonly name

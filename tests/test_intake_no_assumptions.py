@@ -249,3 +249,33 @@ def test_extra_group_only_when_rules_need_it():
     assert group == "extra" and missing == ["special_status"]  # manufacturing: 8th pass only above Rs 10 lakh
     ctx["profile"]["gender"] = "female"
     assert intake.next_group(ctx) is None
+
+
+# 11. Every question is asked: details mentioned early are held back until their own question is asked
+def test_early_mentions_are_asked_again_not_skipped():
+    chat_id = _chat()
+    _start_english(chat_id)
+    # Own money and name mentioned in the opening message, before their questions
+    _say(chat_id, "dairy in Mysuru, project cost 3 lakh, my own money 50000")
+    state, ctx = _load(chat_id)
+    assert ctx.get("available_capital") is None
+    assert ctx["volunteered"]["available_capital"] == 50000.0
+
+    _say(chat_id, "Ravi, 40, man, SC")
+    messages = []
+    state, ctx = _load(chat_id)
+    assert "available_capital" in ctx["pending_fields"]  # own money is still asked
+    messages = _say(chat_id, "village, income 2 lakh")
+    assert any("own money" in m.lower() and "₹50,000" in m for m in messages)  # the question shows what was mentioned
+    state, ctx = _load(chat_id)
+    assert ctx["pending_fields"] == ["available_capital"]
+
+    _say(chat_id, "yes")
+    state, ctx = _load(chat_id)
+    assert ctx["available_capital"] == 50000.0
+    assert state == "CONFIRM_PROFILE"
+
+
+def test_yes_is_never_read_as_a_name():
+    from app.dialogue.intake_parsing import parse_name
+    assert parse_name("हाँ") is None and parse_name("yes") is None and parse_name("ಹೌದು") is None
