@@ -1,0 +1,586 @@
+{
+  "dataset_version": "1.0.0",
+  "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+  "source_document": "NABARD Karnataka UC Booklet 26_27.pdf",
+  "issuing_authority": "NABARD Karnataka Regional Office, Bengaluru",
+  "approved_by": "State Level Unit Cost Committee (SLUCC) on 29 May 2026",
+  "state": "Karnataka",
+  "effective_year": "2026-27",
+  "generated_at": "2026-09-25T16:17:00+05:30",
+  "pilot_categories_status": {
+    "dairy": "AVAILABLE",
+    "poultry": "AVAILABLE",
+    "sheep_rearing": "AVAILABLE",
+    "goat_rearing": "AVAILABLE",
+    "piggery": "AVAILABLE",
+    "fisheries": "AVAILABLE",
+    "beekeeping": "AVAILABLE",
+    "sericulture": "AVAILABLE",
+    "tailoring": "DATA_NOT_AVAILABLE",
+    "kirana_grocery": "DATA_NOT_AVAILABLE",
+    "flour_mill": "DATA_NOT_AVAILABLE"
+  },
+  "benchmarks": [
+    {
+      "benchmark_id": "NABARD_KA_DAIRY_2COW_HF_2026_27",
+      "activity": "Dairy Farming",
+      "sub_activity": "2 Crossbred Cows (HF - Holstein Friesian)",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "2 Animals (with shed and 1st batch recurring cost)",
+      "quantity": 2,
+      "cost_breakdown": [
+        {
+          "item_name": "Cost of animals - cross bred HF (2 animals)",
+          "category": "LIVESTOCK",
+          "amount": 170000.0
+        },
+        {
+          "item_name": "Cost of shed for 2 animals (@65 sq.ft./animal)",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 32500.0
+        },
+        {
+          "item_name": "Insurance @6% on cost of animals",
+          "category": "RECURRING_INSURANCE",
+          "amount": 10200.0
+        },
+        {
+          "item_name": "Concentrates for 30 days @ ₹30/kg per animal",
+          "category": "RECURRING_FEED",
+          "amount": 9360.0
+        },
+        {
+          "item_name": "Cost of green fodder (1st batch)",
+          "category": "RECURRING_FODDER",
+          "amount": 4320.0
+        },
+        {
+          "item_name": "Cost of dry fodder (1st batch)",
+          "category": "RECURRING_FODDER",
+          "amount": 1080.0
+        },
+        {
+          "item_name": "Miscellaneous cost (@₹30/day/animal for 30 days)",
+          "category": "RECURRING_MISC",
+          "amount": 1800.0
+        }
+      ],
+      "unit_cost": 229000.0,
+      "total_cost": 229000.0,
+      "repayment_period": "5 years",
+      "grace_period": "None specified",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 41,
+      "chapter": "Chapter 7 - Animal Husbandry (AH-Dairy)",
+      "table_reference": "Table 1. Dairy- Two Animal unit",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_DAIRY_2COW_JERSEY_2026_27",
+      "activity": "Dairy Farming",
+      "sub_activity": "2 Crossbred Cows (Jersey)",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "2 Animals (with shed and 1st batch recurring cost)",
+      "quantity": 2,
+      "cost_breakdown": [
+        {
+          "item_name": "Cost of animals - cross bred Jersey (2 animals)",
+          "category": "LIVESTOCK",
+          "amount": 150000.0
+        },
+        {
+          "item_name": "Cost of shed for 2 animals (@65 sq.ft./animal)",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 32500.0
+        },
+        {
+          "item_name": "Insurance @6% on cost of animals",
+          "category": "RECURRING_INSURANCE",
+          "amount": 9000.0
+        },
+        {
+          "item_name": "Concentrates for 30 days @ ₹30/kg per animal",
+          "category": "RECURRING_FEED",
+          "amount": 7200.0
+        },
+        {
+          "item_name": "Cost of green fodder (1st batch)",
+          "category": "RECURRING_FODDER",
+          "amount": 3564.0
+        },
+        {
+          "item_name": "Cost of dry fodder (1st batch)",
+          "category": "RECURRING_FODDER",
+          "amount": 950.0
+        },
+        {
+          "item_name": "Miscellaneous cost (@₹30/day/animal for 30 days)",
+          "category": "RECURRING_MISC",
+          "amount": 1800.0
+        }
+      ],
+      "unit_cost": 205000.0,
+      "total_cost": 205000.0,
+      "repayment_period": "5 years",
+      "grace_period": "None specified",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 41,
+      "chapter": "Chapter 7 - Animal Husbandry (AH-Dairy)",
+      "table_reference": "Table 1. Dairy- Two Animal unit",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_POULTRY_BROILER_2000_INTEGRATION_2026_27",
+      "activity": "Poultry Farming",
+      "sub_activity": "Commercial Broiler Unit under integration – 2000 birds (Deep litter system)",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "2000 Birds",
+      "quantity": 2000,
+      "cost_breakdown": [
+        {
+          "item_name": "Land",
+          "category": "LAND",
+          "amount": 0.0,
+          "note": "Own land required"
+        },
+        {
+          "item_name": "Civil Structures - Shed for Broilers (1.0 sq.ft. per broiler; 2000 broilers; ₹150 per sq.ft.)",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 300000.0
+        },
+        {
+          "item_name": "Minor Irrigation structures",
+          "category": "WATER_INFRASTRUCTURE",
+          "amount": 10000.0
+        },
+        {
+          "item_name": "Equipment - Broiler equipment (2000 chicks; ₹36.75 per bird)",
+          "category": "EQUIPMENT",
+          "amount": 70000.0
+        },
+        {
+          "item_name": "Working capital - Rice Husk, Electricity, Labour charges & Misc @ ₹11 per bird",
+          "category": "WORKING_CAPITAL",
+          "amount": 76000.0,
+          "note": "Other items like chicks, feed, etc. are provided by the integrators and hence not required to be financed."
+        }
+      ],
+      "unit_cost": 456000.0,
+      "total_cost": 456000.0,
+      "repayment_period": "5 years",
+      "grace_period": "6 months",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 50,
+      "chapter": "Chapter 7 - Animal Husbandry (AH-Poultry)",
+      "table_reference": "Table 4. Commercial Broiler Unit under integration – 2000 birds",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_POULTRY_BROILER_5000_COMMERCIAL_2026_27",
+      "activity": "Poultry Farming",
+      "sub_activity": "Commercial broiler unit - 5000 birds per batch",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "5000 Birds per batch",
+      "quantity": 5000,
+      "cost_breakdown": [
+        {
+          "item_name": "Civil structures",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 787500.0
+        },
+        {
+          "item_name": "Electrical installations & Charges",
+          "category": "ELECTRICAL",
+          "amount": 57750.0
+        },
+        {
+          "item_name": "MI structures",
+          "category": "WATER_INFRASTRUCTURE",
+          "amount": 109340.0
+        },
+        {
+          "item_name": "Equipment",
+          "category": "EQUIPMENT",
+          "amount": 183750.0
+        },
+        {
+          "item_name": "Working Capital",
+          "category": "WORKING_CAPITAL",
+          "amount": 942506.0
+        }
+      ],
+      "unit_cost": 2080000.0,
+      "total_cost": 2080000.0,
+      "repayment_period": "5 years",
+      "grace_period": "6 months",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 49,
+      "chapter": "Chapter 7 - Animal Husbandry (AH-Poultry)",
+      "table_reference": "Table 2. Commercial broiler unit - 5000 birds per batch",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_SHEEP_REARING_10PLUS1_BANNUR_2026_27",
+      "activity": "Sheep Rearing",
+      "sub_activity": "Sheep Rearing Unit (10 Ewes + 1 Ram) - Bannur Breed",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "11 Animals (10+1)",
+      "quantity": 11,
+      "cost_breakdown": [
+        {
+          "item_name": "Cost of animals: 1 Ram (₹9,000) + 10 Ewes (₹60,000)",
+          "category": "LIVESTOCK",
+          "amount": 69000.0
+        },
+        {
+          "item_name": "Shed / pen for 11 animals",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 11000.0
+        },
+        {
+          "item_name": "Grazing charges @ ₹150 per animal per year",
+          "category": "RECURRING_GRAZING",
+          "amount": 1650.0
+        },
+        {
+          "item_name": "Feeding for one cycle",
+          "category": "RECURRING_FEED",
+          "amount": 25295.0
+        },
+        {
+          "item_name": "Veterinary aid (@ ₹30 per animal per year)",
+          "category": "RECURRING_VET",
+          "amount": 330.0
+        },
+        {
+          "item_name": "Insurance cost for adults (@ 5% cost of adults)",
+          "category": "RECURRING_INSURANCE",
+          "amount": 3450.0
+        },
+        {
+          "item_name": "Shearing cost (@ ₹25 per animal per year)",
+          "category": "RECURRING_MISC",
+          "amount": 275.0
+        }
+      ],
+      "unit_cost": 111000.0,
+      "total_cost": 111000.0,
+      "repayment_period": "5 years",
+      "grace_period": "6 months",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 56,
+      "chapter": "Chapter 7 - Animal Husbandry (AH – Sheep, Goat, Piggery & Others)",
+      "table_reference": "Table 2. Sheep Rearing Units (Bannur 10+1)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_SHEEP_REARING_10PLUS1_LOCAL_2026_27",
+      "activity": "Sheep Rearing",
+      "sub_activity": "Sheep Rearing Unit (10 Ewes + 1 Ram) - Local Breed",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "11 Animals (10+1)",
+      "quantity": 11,
+      "cost_breakdown": [
+        {
+          "item_name": "Cost of animals: 1 Ram (₹7,000) + 10 Ewes (₹50,000)",
+          "category": "LIVESTOCK",
+          "amount": 57000.0
+        },
+        {
+          "item_name": "Shed / pen for 11 animals",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 11000.0
+        },
+        {
+          "item_name": "Recurring cost for one year (Grazing, Feeding, Vet aid, Insurance, Shearing)",
+          "category": "RECURRING_OPERATING",
+          "amount": 30400.0
+        }
+      ],
+      "unit_cost": 98000.0,
+      "total_cost": 98000.0,
+      "repayment_period": "5 years",
+      "grace_period": "6 months",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 56,
+      "chapter": "Chapter 7 - Animal Husbandry (AH – Sheep, Goat, Piggery & Others)",
+      "table_reference": "Table 2. Sheep Rearing Units (Local breed 10+1)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_GOAT_REARING_10PLUS1_IMPROVED_2026_27",
+      "activity": "Goat Rearing",
+      "sub_activity": "Goat Rearing Unit (10 Does + 1 Buck) - Improved Breed",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "11 Animals (10+1)",
+      "quantity": 11,
+      "cost_breakdown": [
+        {
+          "item_name": "Cost of animals: 1 Buck (₹8,500) + 10 Does (₹70,000)",
+          "category": "LIVESTOCK",
+          "amount": 78500.0
+        },
+        {
+          "item_name": "Shed / pen for 11 animals",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 11000.0
+        },
+        {
+          "item_name": "Grazing charges @ ₹150 per animal per year",
+          "category": "RECURRING_GRAZING",
+          "amount": 1650.0
+        },
+        {
+          "item_name": "Feeding for one cycle",
+          "category": "RECURRING_FEED",
+          "amount": 17500.0
+        },
+        {
+          "item_name": "Veterinary aid (@ ₹30 per animal per year)",
+          "category": "RECURRING_VET",
+          "amount": 330.0
+        },
+        {
+          "item_name": "Insurance cost for adults (@ 5% cost of adults)",
+          "category": "RECURRING_INSURANCE",
+          "amount": 3925.0
+        }
+      ],
+      "unit_cost": 113000.0,
+      "total_cost": 113000.0,
+      "repayment_period": "5 years",
+      "grace_period": "6 months",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 60,
+      "chapter": "Chapter 7 - Animal Husbandry (AH – Sheep, Goat, Piggery & Others)",
+      "table_reference": "Table 6. Goat Rearing unit (Improved breed 10+1)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_GOAT_REARING_10PLUS1_LOCAL_2026_27",
+      "activity": "Goat Rearing",
+      "sub_activity": "Goat Rearing Unit (10 Does + 1 Buck) - Local Breed",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "11 Animals (10+1)",
+      "quantity": 11,
+      "cost_breakdown": [
+        {
+          "item_name": "Cost of animals: 1 Buck (₹6,500) + 10 Does (₹55,000)",
+          "category": "LIVESTOCK",
+          "amount": 61500.0
+        },
+        {
+          "item_name": "Shed / pen for 11 animals",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 11000.0
+        },
+        {
+          "item_name": "Recurring cost for one year (Grazing, Feeding, Vet aid, Insurance)",
+          "category": "RECURRING_OPERATING",
+          "amount": 22555.0
+        }
+      ],
+      "unit_cost": 95000.0,
+      "total_cost": 95000.0,
+      "repayment_period": "5 years",
+      "grace_period": "6 months",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 60,
+      "chapter": "Chapter 7 - Animal Husbandry (AH – Sheep, Goat, Piggery & Others)",
+      "table_reference": "Table 6. Goat Rearing unit (Local breed 10+1)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_PIGGERY_3PLUS1_FATTENING_2026_27",
+      "activity": "Piggery Farming",
+      "sub_activity": "Pig rearing cum fattening unit (3 sows + 1 boar)",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "4 Animals (3 sows + 1 boar)",
+      "quantity": 4,
+      "cost_breakdown": [
+        {
+          "item_name": "Cost of 3 Sows @ ₹5,000 + 1 boar @ ₹6,000 (4 to 5 months old)",
+          "category": "LIVESTOCK",
+          "amount": 21000.0
+        },
+        {
+          "item_name": "Cost of shed - 280 sq. ft. @ ₹200 per sq. ft.",
+          "category": "CIVIL_STRUCTURE",
+          "amount": 56000.0
+        },
+        {
+          "item_name": "Water supply (Borewell, electric motor pumpset 1 HP) & equipment",
+          "category": "WATER_EQUIPMENT",
+          "amount": 25000.0
+        },
+        {
+          "item_name": "Insurance @ 5% of cost of animals",
+          "category": "RECURRING_INSURANCE",
+          "amount": 1050.0
+        },
+        {
+          "item_name": "Cost of feed for 9 months",
+          "category": "RECURRING_FEED",
+          "amount": 58650.0
+        },
+        {
+          "item_name": "Veterinary aid @ ₹200 per animal",
+          "category": "RECURRING_VET",
+          "amount": 800.0
+        },
+        {
+          "item_name": "Miscellaneous @ ₹500 per animal",
+          "category": "RECURRING_MISC",
+          "amount": 2000.0
+        }
+      ],
+      "unit_cost": 164000.0,
+      "total_cost": 164000.0,
+      "repayment_period": "5 years",
+      "grace_period": "6 months",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 64,
+      "chapter": "Chapter 7 - Animal Husbandry (AH – Sheep, Goat, Piggery & Others)",
+      "table_reference": "Table 8. Pig rearing cum fattening unit (3 sows + 1 boar)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_FISHERIES_FRESHWATER_1HA_2026_27",
+      "activity": "Fisheries and Aquaculture",
+      "sub_activity": "Freshwater fish culture in new ponds - Composite fish culture of Indian major carps",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "1 ha",
+      "quantity": 1,
+      "cost_breakdown": [
+        {
+          "item_name": "Pond construction, civil works, fingerlings stocking, feed, manures and fertilizer inputs",
+          "category": "AQUACULTURE_DEVELOPMENT",
+          "amount": 829000.0
+        }
+      ],
+      "unit_cost": 829000.0,
+      "total_cost": 829000.0,
+      "repayment_period": "7 years",
+      "grace_period": "1 year",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 68,
+      "chapter": "Chapter 8 – Fisheries and Aquaculture",
+      "table_reference": "Table 1. Inland Aquaculture - Item 1 Freshwater fish culture in new ponds",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_BEEKEEPING_10COLONY_APIARY_2026_27",
+      "activity": "Beekeeping / Apiary",
+      "sub_activity": "Apiary (Apis mellifera, Apis cerana indica) - 10 Colony Unit",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "10 Colonies",
+      "quantity": 10,
+      "cost_breakdown": [
+        {
+          "item_name": "Beehive box @ ₹2,000 (10 Nos.)",
+          "category": "EQUIPMENT",
+          "amount": 20000.0
+        },
+        {
+          "item_name": "Bee colonies (10 Nos.)",
+          "category": "LIVESTOCK",
+          "amount": 20000.0
+        },
+        {
+          "item_name": "Beehive stands (10 Nos.)",
+          "category": "EQUIPMENT",
+          "amount": 5000.0
+        },
+        {
+          "item_name": "Honey extractor (1 No.)",
+          "category": "EQUIPMENT",
+          "amount": 4500.0
+        },
+        {
+          "item_name": "Smoker, bee veil, hive tools, bee wax sheets (40 Nos.)",
+          "category": "EQUIPMENT",
+          "amount": 3300.0
+        },
+        {
+          "item_name": "One year cycle of operating expenses (Sugar, medicine, cloth, etc.)",
+          "category": "OPERATING_EXPENSES",
+          "amount": 10000.0
+        }
+      ],
+      "unit_cost": 62800.0,
+      "total_cost": 62800.0,
+      "repayment_period": "4 years",
+      "grace_period": "1 year",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 30,
+      "chapter": "Chapter 4 - Plantation & Horticulture",
+      "table_reference": "Table 6. Apiary (Apis mellifera, Apis cerana indica)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "benchmark_id": "NABARD_KA_SERICULTURE_MULBERRY_1HA_2026_27",
+      "activity": "Sericulture",
+      "sub_activity": "Mulberry garden establishment (1 hectare)",
+      "state": "Karnataka",
+      "district": null,
+      "year": "2026-27",
+      "unit": "1 hectare",
+      "quantity": 1,
+      "cost_breakdown": [
+        {
+          "item_name": "Mulberry garden establishment (land prep, planting, saplings, irrigation, manures)",
+          "category": "PLANTATION_ESTABLISHMENT",
+          "amount": 225000.0
+        }
+      ],
+      "unit_cost": 225000.0,
+      "total_cost": 225000.0,
+      "repayment_period": "5 years",
+      "grace_period": "1 year",
+      "source_id": "NABARD_KA_UC_BOOKLET_2026_27",
+      "source_page": 34,
+      "chapter": "Chapter 5 – Sericulture",
+      "table_reference": "Table 1. Shoot Rearing System - Item 1 Mulberry garden establishment",
+      "verification_status": "VERIFIED"
+    }
+  ],
+  "unsupported_pilot_activities": [
+    {
+      "activity": "Tailoring & Garment Stitching",
+      "status": "DATA_NOT_AVAILABLE",
+      "reason": "NABARD Karnataka Unit Cost Booklet 2026-27 is restricted to Agriculture & Allied Activities (Chapters 1 to 10: Water Resources, Land Dev, Farm Mech, Plantation/Horticulture, Sericulture, Forestry, Animal Husbandry, Fisheries, Storage, Renewable Energy). Off-farm artisan/tailoring activities are not published in this booklet."
+    },
+    {
+      "activity": "Kirana Stall / Village Grocery Store",
+      "status": "DATA_NOT_AVAILABLE",
+      "reason": "Retail trade is an unorganized commercial service/business activity not covered in the agricultural investment cost booklet."
+    },
+    {
+      "activity": "Mini Flour Mill (Atta Chakki)",
+      "status": "DATA_NOT_AVAILABLE",
+      "reason": "Food processing micro-mills are not itemized under Chapter 3 (Farm Mechanization) or Chapter 4 in this edition."
+    }
+  ]
+}
