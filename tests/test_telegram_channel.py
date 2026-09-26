@@ -1,3 +1,4 @@
+from tests.intake_helpers import complete_intake, login_officer
 import uuid
 import pytest
 from fastapi.testclient import TestClient
@@ -66,6 +67,8 @@ def test_telegram_end_to_end_dialogue_to_sanction():
 
     # Step 1: User sends message on Telegram
     process_telegram_query(chat_id, "I want to start a poultry broiler farm in Mandya with ₹2,80,000", user_name="Suresh")
+    complete_intake(lambda t: process_telegram_query(chat_id, t, user_name="Suresh"),
+                    lambda db: crud.get_or_create_telegram_beneficiary(db, chat_id))
 
     db = SessionLocal()
     try:
@@ -75,7 +78,7 @@ def test_telegram_end_to_end_dialogue_to_sanction():
 
         fin = beneficiary.conversation_context.get("financial_structure")
         assert fin is not None
-        assert fin["scheme"] == "TERM_LOAN"
+        assert fin["scheme"] == "NSFDC_TERM_LOAN"
         assert fin["cost"] == 280000.0
         assert fin["loan"] == 252000.0  # 90% of 280,000
         assert fin["margin"] == 28000.0  # 10%
@@ -94,7 +97,7 @@ def test_telegram_end_to_end_dialogue_to_sanction():
         matched = [p for p in proposals if p.beneficiary_id == beneficiary.id]
         assert len(matched) == 1
         proposal = matched[0]
-        assert proposal.scheme_tier == "TERM_LOAN"
+        assert proposal.scheme_tier == "NSFDC_TERM_LOAN"
         proposal_id = proposal.id
 
     finally:
@@ -110,6 +113,7 @@ def test_telegram_end_to_end_dialogue_to_sanction():
         "remarks": "Poultry shed land verified. Margin money confirmed."
     }
 
+    login_officer(client)
     resp = client.post(f"/internal/sanction/{proposal_id}", json=sanction_payload)
     assert resp.status_code == 200
     assert resp.json()["new_status"] == "SANCTIONED"

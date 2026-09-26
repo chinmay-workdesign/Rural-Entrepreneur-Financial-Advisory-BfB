@@ -28,15 +28,4 @@ def call_llm_chat(
             return gemini_result.strip()
         logger.warning("Gemini returned empty or was rate-limited.")
 
-    # If Gemini not configured or returned empty, return valid empty JSON or empty string
-    if response_format and response_format.get("type") == "json_object":
-        return json.dumps({
-            "trade": None,
-            "district": None,
-            "state": None,
-            "available_capital": None,
-            "project_cost": None,
-            "language": "kannada"
-        })
-
     return ""

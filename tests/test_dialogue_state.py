@@ -5,6 +5,7 @@ from app.db import crud
 from app.dialogue.conversation_state import process_user_query
 from app.main import app
 from fastapi.testclient import TestClient
+from tests.intake_helpers import complete_intake, login_officer
 
 client = TestClient(app)
 
@@ -22,6 +23,7 @@ def test_full_dialogue_to_sanction_flow():
     # Step 1: Initial user query
     user_msg = "I want to start a kirana stall in Belagavi with ₹1,20,000"
     process_user_query(phone, user_msg)
+    complete_intake(lambda t: process_user_query(phone, t), lambda db: crud.get_or_create_beneficiary(db, phone))
 
     db = SessionLocal()
     try:
@@ -31,7 +33,7 @@ def test_full_dialogue_to_sanction_flow():
 
         fin = beneficiary.conversation_context.get("financial_structure")
         assert fin is not None
-        assert fin["scheme"] == "MICRO_FINANCE"
+        assert fin["scheme"] == "NSFDC_MICRO_FINANCE"
         assert fin["cost"] == 120000.0
         assert fin["loan"] == 108000.0
         assert fin["margin"] == 12000.0
@@ -68,6 +70,7 @@ def test_full_dialogue_to_sanction_flow():
         "remarks": "Shop visited. Margin money verified in Canara Bank account."
     }
 
+    login_officer(client)
     resp = client.post(f"/internal/sanction/{proposal_id}", json=sanction_payload)
     assert resp.status_code == 200
     assert resp.json()["new_status"] == "SANCTIONED"
@@ -156,7 +159,7 @@ def test_telugu_and_marathi_advisory_generation():
         language="telugu",
         state="Andhra Pradesh"
     )
-    assert "150,000" in adv_te
+    assert "1,50,000" in adv_te
     assert "GENERATE DPR" in adv_te
     assert sum(1 for c in adv_te if 0x0C00 <= ord(c) <= 0x0C7F) > 50
 
@@ -168,7 +171,7 @@ def test_telugu_and_marathi_advisory_generation():
         language="marathi",
         state="Maharashtra"
     )
-    assert "150,000" in adv_mr
+    assert "1,50,000" in adv_mr
     assert "GENERATE DPR" in adv_mr
     assert sum(1 for c in adv_mr if 0x0900 <= ord(c) <= 0x097F) > 50
 

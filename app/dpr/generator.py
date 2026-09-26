@@ -1,4 +1,5 @@
 import os
+from app.finance.formatting import format_inr
 import io
 import logging
 from datetime import datetime
@@ -10,113 +11,38 @@ logger = logging.getLogger("dpr_generator")
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")
 _jinja_env = Environment(loader=FileSystemLoader(TEMPLATES_DIR), autoescape=True)
 
-def _get_trade_equipment_items(trade: str, total_cost: float) -> list:
-    """Return realistic, trade-specific itemized capital equipment and working capital breakdown."""
-    t = (trade or "").lower()
+NOT_PROVIDED = "Not provided"
+GENDER_LABELS = {"male": "Man", "female": "Woman", "transgender": "Transgender"}
+CATEGORY_LABELS = {"general": "General", "sc": "SC", "st": "ST", "obc": "OBC", "minority": "Minority"}
+AREA_LABELS = {"rural": "Rural (Gram Panchayat)", "urban": "Urban (Municipality)"}
 
-    if any(k in t for k in ["fertilizer", "pesticide", "agro", "seed", "ರಸಗೊಬ್ಬರ", "ಕೀಟನಾಶಕ"]):
-        return [
-            ("Heavy-Duty Galvanized Steel Storage Racks & Chemical Safety Pallets", total_cost * 0.22),
-            ("Secure Hazardous Material Storage Cabinets & Spill Containment Unit", total_cost * 0.12),
-            ("Certified Digital Platform Scale (150kg) & Moisture Analyzer", total_cost * 0.08),
-            ("Dept of Agriculture Trade Licensing, Safety Signage & Fire Extinguishers", total_cost * 0.06),
-            ("Initial Working Capital: Certified Seeds, NPK/DAP Fertilizers & Bio-Pesticides", total_cost * 0.52)
-        ]
-    elif any(k in t for k in ["tailor", "garment", "sewing", "clothes", "ಹೊಲಿಗೆ"]):
-        return [
-            ("Industrial Single-Needle Lockstitch Sewing Machine (High-Speed)", total_cost * 0.38),
-            ("Heavy-Duty 4-Thread Overlock / Safety Stitch Machine", total_cost * 0.22),
-            ("Master Fabric Cutting Table, Ergonomic Shears & Tailoring Tooling", total_cost * 0.10),
-            ("Commercial Electric Steam Ironing Station & Vacuum Board", total_cost * 0.05),
-            ("Initial Working Capital: Fabrics, Thread Cones, Interlining & Utility Buffer", total_cost * 0.25)
-        ]
-    elif any(k in t for k in ["kirana", "grocery", "provision", "store", "shop", "stall", "ಕಿರಾಣಿ"]):
-        return [
-            ("Heavy-Duty Modular Steel Display Racks & Merchandising Shelves", total_cost * 0.25),
-            ("Commercial Glass-Top Deep Chest Refrigerator (Cold Drinks/Dairy)", total_cost * 0.20),
-            ("Certified Electronic Digital Weighing Scale (30kg Dual Display)", total_cost * 0.05),
-            ("POS Billing Counter, Cash Drawer & Security Shutter Enclosure", total_cost * 0.10),
-            ("Initial Working Capital: Packaged Grains, FMCG, Edible Oils & Packaged Goods", total_cost * 0.40)
-        ]
-    elif any(k in t for k in ["dairy", "cow", "buffalo", "cattle", "milk", "ಹಸು", "ಹೈನುಗಾರಿಕೆ"]):
-        return [
-            ("Purchase of High-Yielding Milch Animals (HF/Jersey Cross with Health Cert)", total_cost * 0.58),
-            ("Cattle Shed Construction (Concrete Sloped Flooring, Gutter & Feeding Manger)", total_cost * 0.20),
-            ("Stainless Steel Heavy Milking Pails, Canisters & Transport Milk Cans", total_cost * 0.07),
-            ("Initial Working Capital: Fodder Seeds, Mineral Mix, Concentrated Feed & Vet Care", total_cost * 0.15)
-        ]
-    elif any(k in t for k in ["fish", "fishery", "fisheries", "aquaculture", "prawn", "ಮೀನು", "ಮತ್ಸ್ಯ"]):
-        return [
-            ("Fish Pond Excavation, Soil Conditioning, Inflow/Outflow Bunding & Netting", total_cost * 0.35),
-            ("Submersible High-Efficiency Water Aerator Pump & DO Testing Kit", total_cost * 0.20),
-            ("Commercial High-Growth Fingerling Seed Stock (Rohu / Catla / Tilapia)", total_cost * 0.15),
-            ("High-Protein Floating Fish Feed Stock, Probiotics & Water Conditioners", total_cost * 0.20),
-            ("Harvesting Cast/Drag Nets, Sorting Trays & Oxygenated Transport Cans", total_cost * 0.10)
-        ]
-    elif any(k in t for k in ["poultry", "chicken", "broiler", "egg", "ಕೋಳಿ"]):
-        return [
-            ("Commercial Broiler Shed Setup (Insulated Roof, Wire Mesh & Litter Bedding)", total_cost * 0.40),
-            ("Automated Suspended Feeders, Bell Drinkers & Electric Brooder Heating", total_cost * 0.15),
-            ("Day-Old Chicks (DOC) Commercial Starter Flock", total_cost * 0.20),
-            ("Initial Working Capital: Pre-Starter / Finisher Feed, Vaccines & Biosecurity", total_cost * 0.25)
-        ]
-    elif any(k in t for k in ["flour", "mill", "atta", "chakki", "ಹಿಟ್ಟು", "ಗಿರಣಿ"]):
-        return [
-            ("Commercial 10-15 HP Heavy-Duty Chakki Mill with 3-Phase Induction Motor", total_cost * 0.45),
-            ("Grain Destoner, Vibratory Cleaning Sieve & Husk Separator", total_cost * 0.20),
-            ("Vibration-Damped Foundation, 3-Phase Wiring, DOL Starter & Safety Enclosure", total_cost * 0.15),
-            ("Initial Working Capital: Wheat Grain Stock & Commercial Packaging Bags", total_cost * 0.20)
-        ]
-    elif any(k in t for k in ["weave", "handloom", "powerloom", "loom", "ಮಗ್ಗ"]):
-        return [
-            ("Semi-Automatic Frame Loom with Electronic Jacquard Attachment", total_cost * 0.50),
-            ("Warping Drum, Pirn Winder & Reed/Heald Wire Set", total_cost * 0.15),
-            ("Loom Shed Illumination, Bobbin Storage Racks & Structural Stand", total_cost * 0.10),
-            ("Initial Working Capital: Quality Yarn Hanks, Dyes, Sizing Chemicals & Buffers", total_cost * 0.25)
-        ]
-    else:
-        return [
-            (f"Primary Production Machinery & Core Equipment for {trade}", total_cost * 0.50),
-            ("Operational Workstation, Electric Power Wiring & Safety Fittings", total_cost * 0.15),
-            ("Measuring Instruments, Tooling Kits & Quality Packaging Equipment", total_cost * 0.10),
-            ("Initial Working Capital: Raw Materials, Consumables & Operational Contingency", total_cost * 0.25)
-        ]
 
-def _get_5year_cashflows(total_cost: float, monthly_emi: float, scheme_tier: str) -> list:
-    """Compute realistic 5-year financial cash flow projection table."""
-    rows = []
-    tenure_years = 3 if scheme_tier == "MICRO_FINANCE" else 5
-    specs = [
-        ("Year 1 (70%)", 1.60, 0.65),
-        ("Year 2 (80%)", 1.85, 0.64),
-        ("Year 3 (90%)", 2.10, 0.63),
-        ("Year 4 (95%)", 2.30, 0.62),
-        ("Year 5 (100%)", 2.50, 0.61),
-    ]
-    for idx, (label, rev_m, opex_m) in enumerate(specs, start=1):
-        rev = total_cost * rev_m
-        opex = rev * opex_m
-        ebitda = rev - opex
-        debt_service = (monthly_emi * 12.0) if idx <= tenure_years else 0.0
-        net_surplus = ebitda - debt_service
-        dscr = round(ebitda / debt_service, 2) if debt_service > 0 else 9.99
-        rows.append({
-            "year": label,
-            "revenue": rev,
-            "opex": opex,
-            "ebitda": ebitda,
-            "debt_service": debt_service,
-            "net_surplus": net_surplus,
-            "dscr": dscr
-        })
-    return rows
+def _pmegp_summary(pmegp):
+    """(benefit text, norm text) for the PMEGP rows, from the computed result only."""
+    if pmegp.get("eligible") is False:
+        return "Not eligible: " + " ".join(pmegp.get("ineligible_reasons") or []), "Not eligible"
+    if pmegp.get("eligible") and pmegp.get("subsidy_pct") is not None:
+        amount = format_inr(pmegp["subsidy_amount"]) if pmegp.get("subsidy_amount") is not None else "amount to be confirmed by DIC"
+        basis = f"{pmegp['category_basis'].capitalize()} category, {pmegp['area_type']}"
+        return (
+            f"{pmegp['subsidy_pct']:g}% subsidy ({amount}); own contribution {pmegp['own_contribution_pct']:g}% "
+            f"({format_inr(pmegp['own_contribution'])}); bank loan {pmegp['bank_loan_pct']:g}%",
+            f"{pmegp['subsidy_pct']:g}% ({basis})",
+        )
+    return "Not computed: applicant category / location not provided", "Not computed"
+
 
 def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any], date_str: str) -> bytes:
     """Professional 2-page bank-ready Detailed Project Report (DPR) PDF."""
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.platypus import SimpleDocTemplate, Spacer, Table, TableStyle, PageBreak
+    from reportlab.platypus import Paragraph as _RLParagraph
+
+    def Paragraph(text, style):
+        # The built-in PDF fonts have no rupee glyph (it renders as a box), so amounts are printed as "Rs."
+        return _RLParagraph(str(text).replace("₹", "Rs. "), style)
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -165,9 +91,9 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
 
     # Meta bar
     prop_id = str(proposal.get("id", "PROPOSAL"))[:8].upper()
-    trade_name = str(proposal.get("business_trade", "Rural Enterprise"))
-    district_name = str(beneficiary.get("district") or proposal.get("district") or "Belagavi")
-    state_name = str(beneficiary.get("state") or proposal.get("state") or "Karnataka")
+    trade_name = str(proposal["business_trade"])
+    district_name = str(beneficiary.get("district") or proposal.get("district") or NOT_PROVIDED)
+    state_name = str(beneficiary.get("state") or proposal.get("state") or NOT_PROVIDED)
     meta_text = (
         f"<b>DPR Ref:</b> DPR-{prop_id} &nbsp;|&nbsp; "
         f"<b>Date:</b> {date_str} &nbsp;|&nbsp; "
@@ -179,22 +105,42 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
 
     # 1. Beneficiary Profile
     story.append(Paragraph("1. Entrepreneur & Promoter Profile", heading2_style))
+    # Applicant details exactly as stated and confirmed by the applicant; never defaulted
+    profile = beneficiary.get("profile") or {}
+
+    def _stated(field, fmt=str):
+        value = profile.get(field, beneficiary.get(field))
+        return fmt(value) if value is not None else NOT_PROVIDED
+
+    gender_age = f"{_stated('gender', lambda v: GENDER_LABELS.get(v, v))} / {_stated('age')}"
     beneficiary_table_data = [
         [
             Paragraph("<b>Applicant Name:</b>", cell_style),
-            Paragraph(str(beneficiary.get("full_name") or "Rural Entrepreneur"), bold_cell_style),
+            Paragraph(_stated("full_name"), bold_cell_style),
             Paragraph("<b>Contact No:</b>", cell_style),
-            Paragraph(str(beneficiary.get("whatsapp_number")), cell_style)
+            Paragraph(str(beneficiary.get("whatsapp_number") or NOT_PROVIDED), cell_style)
         ],
         [
             Paragraph("<b>Enterprise Location:</b>", cell_style),
             Paragraph(f"{district_name}, {state_name}", cell_style),
             Paragraph("<b>Language:</b>", cell_style),
-            Paragraph(str(beneficiary.get("preferred_language", "Kannada")).capitalize(), cell_style)
+            Paragraph(str(beneficiary.get("preferred_language") or NOT_PROVIDED).capitalize(), cell_style)
         ],
         [
-            Paragraph("<b>Annual Household Income:</b>", cell_style),
-            Paragraph(f"₹{float(beneficiary.get('annual_family_income') or 65000):,.2f}", cell_style),
+            Paragraph("<b>Gender / Age:</b>", cell_style),
+            Paragraph(gender_age, cell_style),
+            Paragraph("<b>Social Category:</b>", cell_style),
+            Paragraph(_stated("social_category", lambda v: CATEGORY_LABELS.get(v, v)), cell_style)
+        ],
+        [
+            Paragraph("<b>Location Type:</b>", cell_style),
+            Paragraph(_stated("area_type", lambda v: AREA_LABELS.get(v, v)), cell_style),
+            Paragraph("<b>Annual Family Income:</b>", cell_style),
+            Paragraph(_stated("annual_family_income", format_inr), cell_style)
+        ],
+        [
+            Paragraph("<b>Own Money to Invest:</b>", cell_style),
+            Paragraph(_stated("available_capital", format_inr), cell_style),
             Paragraph("<b>Appraisal Status:</b>", cell_style),
             Paragraph(f"<b>{proposal.get('status', 'DRAFT')} (Ready for Bank/SCA)</b>", cell_style)
         ]
@@ -207,176 +153,145 @@ def _render_reportlab_pdf(proposal: Dict[str, Any], beneficiary: Dict[str, Any],
         ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     story.append(b_table)
+    story.append(Paragraph(
+        "<i>Applicant details are as stated and confirmed by the applicant in the conversation (User Input); "
+        "to be verified by the SCA field officer.</i>", cell_style))
     story.append(Spacer(1, 4))
 
-    # 2. Proposed Enterprise & Dynamic Equipment Breakdown
-    cost = float(proposal.get("project_cost", 120000.0))
-    loan = float(proposal.get("sanctioned_loan", cost * 0.90))
-    margin = float(proposal.get("beneficiary_margin", cost * 0.10))
-    emi = float(proposal.get("monthly_emi", 3583.0))
-    dscr = float(proposal.get("projected_dscr", 1.65))
-    scheme = proposal.get("scheme_tier", "MICRO_FINANCE")
+    # 2-6 use only: the applicant's stated cost, the NABARD booklet, and verified scheme rules.
+    cost = float(proposal["project_cost"])
+    fin = proposal.get("financial_structure") or {}
+    schemes = proposal.get("multi_schemes") or {}
+    pmegp = schemes.get("pmegp") or {}
+    mudra = schemes.get("mudra") or {}
 
-    story.append(Paragraph(f"2. Itemized Machinery, Capital Assets & Working Capital Breakdown ({trade_name})", heading2_style))
-    eq_items = _get_trade_equipment_items(trade_name, cost)
-    eq_table_data = [
-        [Paragraph("<b>Item Description / Asset Specification</b>", white_header_style), Paragraph("<b>Category</b>", white_header_style), Paragraph("<b>Estimated Cost (₹)</b>", white_header_style), Paragraph("<b>Share (%)</b>", white_header_style)]
-    ]
-    for idx, (item_desc, item_amt) in enumerate(eq_items):
-        cat = "Working Capital" if "working capital" in item_desc.lower() else "Capital Asset"
-        pct = (item_amt / cost) * 100
-        eq_table_data.append([
-            Paragraph(item_desc, cell_style),
-            Paragraph(cat, cell_style),
-            Paragraph(f"₹{item_amt:,.2f}", cell_style),
-            Paragraph(f"{pct:.1f}%", cell_style)
-        ])
-    eq_table_data.append([
-        Paragraph("<b>Total Project Outlay (Verified Outlay)</b>", bold_cell_style),
-        Paragraph("<b>100% Outlay</b>", bold_cell_style),
-        Paragraph(f"<b>₹{cost:,.2f}</b>", bold_cell_style),
-        Paragraph("<b>100.0%</b>", bold_cell_style)
-    ])
+    from app.finance.repository import benchmark_repository
+    bench = benchmark_repository.get_benchmark(trade_name, district=district_name)
+    has_official_benchmark = bench.get("status") != "DATA_NOT_AVAILABLE"
+    is_nabard = bench.get("source_id") == "NABARD_KA_UC_BOOKLET_2026_27"
+    if has_official_benchmark and is_nabard:
+        ref_label = f"NABARD reference unit cost: {bench.get('sub_activity') or bench.get('activity')}"
+        ref_source = f"NABARD Karnataka Unit Cost Booklet 2026-27, page {bench.get('source_page')}"
+    elif has_official_benchmark:
+        ref_label = f"Reference project cost: {bench.get('sub_activity') or bench.get('activity')}"
+        ref_source = (f"{bench.get('source_organization')} model project profile ({bench.get('publication_year')}), "
+                      f"page {bench.get('source_page')}; not a government unit cost")
 
-    eq_table = Table(eq_table_data, colWidths=[290, 85, 95, 65])
-    eq_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2b6cb0")),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor("#edf2f7")),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
-    ]))
-    story.append(eq_table)
+    def _table(rows, widths, header=True):
+        t = Table(rows, colWidths=widths)
+        style = [('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
+                 ('TOPPADDING', (0, 0), (-1, -1), 2.5), ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+                 ('VALIGN', (0, 0), (-1, -1), 'TOP')]
+        if header:
+            style.append(('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2b6cb0")))
+        t.setStyle(TableStyle(style))
+        return t
+
+    def _h(text):
+        return Paragraph(f"<b>{text}</b>", white_header_style)
+
+    # 2. Project cost
+    story.append(Paragraph(f"2. Project Cost ({trade_name})", heading2_style))
+    cost_rows = [[_h("Item"), _h("Amount"), _h("Basis")],
+                 [Paragraph("Total project cost", cell_style), Paragraph(f"<b>{format_inr(cost)}</b>", bold_cell_style),
+                  Paragraph("Stated and confirmed by the applicant (User Input)", cell_style)]]
+    if has_official_benchmark:
+        cost_rows.append([Paragraph(ref_label, cell_style), Paragraph(format_inr(bench["total_cost"]), bold_cell_style),
+                          Paragraph(ref_source, cell_style)])
+    else:
+        cost_rows.append([Paragraph("NABARD reference unit cost", cell_style), Paragraph("Not available", bold_cell_style),
+                          Paragraph("No official unit cost exists for this activity", cell_style)])
+    story.append(_table(cost_rows, [190, 90, 255]))
+    if has_official_benchmark and bench.get("historical_warning"):
+        story.append(Paragraph(f"<b>Historical reference:</b> {bench['historical_warning']}", cell_style))
+    story.append(Paragraph("<i>Itemised costs of machinery, animals, shed and stock are to be attached from supplier "
+                           "quotations; this report does not estimate them.</i>", cell_style))
     story.append(Spacer(1, 4))
 
-    # 3. Financial Structuring & Means of Finance
-    story.append(Paragraph("3. Means of Finance (Lending Norms & Margin)", heading2_style))
-    fin_data = [
-        [Paragraph("<b>Financing Component</b>", white_header_style), Paragraph("<b>Norm / Concession</b>", white_header_style), Paragraph("<b>Amount (₹)</b>", white_header_style), Paragraph("<b>Share (%)</b>", white_header_style)],
-        [Paragraph("SCA Primary Term Loan / MFS", cell_style), Paragraph("90% Concessional Lending (6.5% - 8% p.a.)", cell_style), Paragraph(f"₹{loan:,.2f}", bold_cell_style), Paragraph(f"{(loan/cost)*100:.2f}%", cell_style)],
-        [Paragraph("Entrepreneur Own Margin Money", cell_style), Paragraph("Min 10% (Verified In-Hand Equity)", cell_style), Paragraph(f"₹{margin:,.2f}", bold_cell_style), Paragraph(f"{(margin/cost)*100:.2f}%", cell_style)],
-        [Paragraph("Total Means of Finance", bold_cell_style), Paragraph("Fully Structured Outlay", bold_cell_style), Paragraph(f"₹{cost:,.2f}", bold_cell_style), Paragraph("100.00%", bold_cell_style)],
-    ]
-    f_table = Table(fin_data, colWidths=[175, 175, 105, 80])
-    f_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2b6cb0")),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#feebc8")),
-        ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor("#edf2f7")),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
-    ]))
-    story.append(f_table)
+    # 3. Concessional corporation loan for the applicant's category
+    story.append(Paragraph("3. Concessional Loan for the Applicant's Category", heading2_style))
+    if fin.get("available"):
+        morat = f", after a {fin['morat']}-month moratorium" if fin.get("morat") else " (moratorium not stated by the corporation; none assumed)"
+        loan_rows = [[_h("Term"), _h("Value")],
+                     [Paragraph("Scheme", cell_style), Paragraph(f"<b>{fin['scheme_name']}</b> ({fin.get('agency_full_name') or fin['agency']})", cell_style)],
+                     [Paragraph("Loan", cell_style), Paragraph(f"<b>{format_inr(fin['loan'])}</b> ({fin['loan_pct']:g}% of project cost)", cell_style)],
+                     [Paragraph("Balance (applicant / channelising agency)", cell_style), Paragraph(f"{format_inr(fin['margin'])} ({fin['margin_pct']:g}%)", cell_style)],
+                     [Paragraph("Interest to beneficiary", cell_style), Paragraph(f"{fin['rate']:g}% per year", cell_style)],
+                     [Paragraph("Repayment", cell_style), Paragraph(
+                         f"{fin['repayment_quarters']} quarterly instalments of <b>{format_inr(fin['quarterly_instalment'])}</b> "
+                         f"(about {format_inr(fin['quarterly_instalment'] / 3)} a month, reducing balance){morat}", cell_style)]]
+        if fin.get("income_limit"):
+            limit_text = format_inr(fin["income_limit"])
+            if fin.get("income_limit_conflict"):
+                limit_text += " (the corporation's site also states ₹98,000 rural / ₹1,20,000 urban; SCA to confirm)"
+            loan_rows.append([Paragraph("Income limit (annual family)", cell_style), Paragraph(limit_text, cell_style)])
+        story.append(_table(loan_rows, [190, 345]))
+        for note in fin.get("notes") or []:
+            story.append(Paragraph(f"&bull; {note}", cell_style))
+    else:
+        story.append(Paragraph(" ".join(fin.get("reasons") or ["No concessional corporation loan applies."]), cell_style))
     story.append(Spacer(1, 4))
 
-    # 4. Debt Servicing Norms
-    story.append(Paragraph("4. Debt Servicing & Primary Loan Terms", heading2_style))
-    rate_str = "6.50% p.a. (Reducing Balance)" if scheme == "MICRO_FINANCE" else "8.00% p.a. (Reducing Balance)"
-    tenure_str = "36 Months (3 Moratorium + 33 EMI)" if scheme == "MICRO_FINANCE" else "84 Months (6 Moratorium + 78 EMI)"
-    debt_data = [
-        [Paragraph("<b>Interest Rate:</b>", cell_style), Paragraph(rate_str, cell_style), Paragraph("<b>Tenure & Moratorium:</b>", cell_style), Paragraph(tenure_str, cell_style)],
-        [Paragraph("<b>Monthly Installment (EMI):</b>", bold_cell_style), Paragraph(f"<b>₹{emi:,.2f}</b>", bold_cell_style), Paragraph("<b>Projected Base DSCR:</b>", bold_cell_style), Paragraph(f"<b>{dscr:.2f} (Bankable &ge; 1.25)</b>", bold_cell_style)],
-    ]
-    d_table = Table(debt_data, colWidths=[130, 140, 130, 135])
-    d_table.setStyle(TableStyle([
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#c6f6d5")),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-    ]))
-    story.append(d_table)
-
-    # PAGE BREAK TO PAGE 2
-    story.append(PageBreak())
-
-    # PAGE 2 HEADER
-    story.append(Paragraph("DETAILED FINANCIAL PROJECTIONS & SCHEME CONCURRENCE", title_style))
-    story.append(Paragraph(f"Financial Viability Roadmap &bull; Ref: DPR-{prop_id} &bull; {trade_name}", subtitle_style))
+    # 4. Repayment capacity
+    story.append(Paragraph("4. Repayment Capacity (DSCR) and Cash Flow", heading2_style))
+    story.append(Paragraph(
+        "<b>Not computed.</b> No official source gives the expected income and operating costs for this activity, so "
+        "a DSCR or 5-year cash flow here would be invented. They should be prepared from the applicant's expected monthly "
+        "sales and expenses and checked by the lending bank.", cell_style))
     story.append(Spacer(1, 4))
 
-    # 5. 5-Year Cash Flow Projection Table
-    story.append(Paragraph("5. 5-Year Financial Cash Flow & DSCR Viability Projections", heading2_style))
-    cf_rows = _get_5year_cashflows(cost, emi, scheme)
-    cf_table_data = [
-        [
-            Paragraph("<b>Year & Capacity</b>", white_header_style),
-            Paragraph("<b>Gross Turnover (₹)</b>", white_header_style),
-            Paragraph("<b>Operating Exp (₹)</b>", white_header_style),
-            Paragraph("<b>Gross Profit (₹)</b>", white_header_style),
-            Paragraph("<b>Debt Service (₹)</b>", white_header_style),
-            Paragraph("<b>Net Profit (₹)</b>", white_header_style),
-            Paragraph("<b>DSCR</b>", white_header_style),
-        ]
-    ]
-    for r in cf_rows:
-        cf_table_data.append([
-            Paragraph(r["year"], cell_style),
-            Paragraph(f"₹{r['revenue']:,.0f}", cell_style),
-            Paragraph(f"₹{r['opex']:,.0f}", cell_style),
-            Paragraph(f"₹{r['ebitda']:,.0f}", cell_style),
-            Paragraph(f"₹{r['debt_service']:,.0f}", cell_style),
-            Paragraph(f"₹{r['net_surplus']:,.0f}", bold_cell_style),
-            Paragraph(f"<b>{r['dscr']}</b>", bold_cell_style),
-        ])
-    cf_table = Table(cf_table_data, colWidths=[85, 80, 80, 75, 75, 75, 65])
-    cf_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2b6cb0")),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-    ]))
-    story.append(cf_table)
+    # 5. Other schemes
+    story.append(Paragraph("5. Other Government Schemes", heading2_style))
+    pmegp_benefit, pmegp_norm = _pmegp_summary(pmegp)
+    tiers = ", ".join(mudra.get("possible_tiers") or []) or "—"
+    scheme_rows = [[_h("Scheme"), _h("What it offers this applicant"), _h("Where to apply")],
+                   [Paragraph("<b>PMEGP (KVIC / DIC)</b>", bold_cell_style), Paragraph(pmegp_benefit, cell_style),
+                    Paragraph("Online at www.kviconline.gov.in", cell_style)],
+                   [Paragraph("<b>MUDRA (PMMY)</b>", bold_cell_style),
+                    Paragraph(f"Collateral-free bank loan (CGFMU guarantee). Category for a loan up to the project cost: {tiers}. "
+                              "Interest rate and own contribution are decided by the bank.", cell_style),
+                    Paragraph("Any bank branch or the Udyamimitra portal", cell_style)]]
+    story.append(_table(scheme_rows, [110, 290, 135]))
     story.append(Spacer(1, 6))
 
-    # 6. Multi-Scheme Concurrence
-    story.append(Paragraph("6. Multi-Scheme Government Lending & Subsidy Alternatives", heading2_style))
-    pmegp_subsidy = cost * 0.35
-    mudra_loan = cost * 0.85
-    schemes_data = [
-        [Paragraph("<b>Scheme</b>", white_header_style), Paragraph("<b>Type & Agency</b>", white_header_style), Paragraph("<b>Key Financial Benefit</b>", white_header_style), Paragraph("<b>Redemption Platform</b>", white_header_style)],
-        [
-            Paragraph("<b>SCA Micro Finance / TLS</b>", bold_cell_style),
-            Paragraph("Direct State Loan (Govt of KA)", cell_style),
-            Paragraph(f"₹{loan:,.2f} at lowest interest (6.5% - 8.0%)", cell_style),
-            Paragraph(f"District SCA / DIC Office ({district_name})", cell_style)
-        ],
-        [
-            Paragraph("<b>PMEGP (KVIC / DIC)</b>", bold_cell_style),
-            Paragraph("Capital Subsidy Grant", cell_style),
-            Paragraph(f"<b>35% Free Grant (₹{pmegp_subsidy:,.2f})</b>; Only 5% margin needed", bold_cell_style),
-            Paragraph("Online at www.kviconline.gov.in", cell_style)
-        ],
-        [
-            Paragraph("<b>MUDRA Yojana (PMMY)</b>", bold_cell_style),
-            Paragraph("Collateral-Free Bank Credit", cell_style),
-            Paragraph(f"₹{mudra_loan:,.2f} (Zero third-party guarantee)", cell_style),
-            Paragraph("JanSamarth (www.jansamarth.in)", cell_style)
-        ],
-    ]
-    s_table = Table(schemes_data, colWidths=[120, 115, 175, 125])
-    s_table.setStyle(TableStyle([
+    # 6. Source & Data Provenance
+    story.append(Paragraph("6. Source & Data Provenance", heading2_style))
+    prov_rows = [[_h("Parameter"), _h("Value"), _h("Source"), _h("Type")]]
+    prov_rows.append([Paragraph("Project cost", cell_style), Paragraph(format_inr(cost), bold_cell_style),
+                      Paragraph("Applicant, confirmed in conversation", cell_style), Paragraph("User Input", cell_style)])
+    if has_official_benchmark:
+        prov_rows.append([Paragraph("Reference project cost", cell_style), Paragraph(format_inr(bench["total_cost"]), bold_cell_style),
+                          Paragraph(ref_source, cell_style),
+                          Paragraph("Official Benchmark" if is_nabard else "Historical Model Profile", cell_style)])
+    if fin.get("available"):
+        corp_source = {"NSFDC": "nsfdc.nic.in scheme & eligibility pages (updated 23.09.2026)",
+                       "NBCFDC": "NBCFDC Pattern of Finance (w.e.f. 01.04.2025)",
+                       "NSTFDC": "nstfdc.tribal.gov.in Term Loan / AMSY pages (undated)"}.get(fin["agency"], fin["agency"])
+        prov_rows.append([Paragraph("Loan share, ceiling, interest, repayment", cell_style),
+                          Paragraph(f"{fin['loan_pct']:g}%, {fin['rate']:g}%", bold_cell_style),
+                          Paragraph(corp_source, cell_style), Paragraph("Scheme Rule", cell_style)])
+        prov_rows.append([Paragraph("Quarterly instalment", cell_style), Paragraph(format_inr(fin["quarterly_instalment"]), bold_cell_style),
+                          Paragraph("Reducing-balance annuity on the rule values above", cell_style), Paragraph("Derived Math", cell_style)])
+    prov_rows.append([Paragraph("PMEGP subsidy", cell_style), Paragraph(pmegp_norm, bold_cell_style),
+                      Paragraph("PMEGP Revised Guidelines (Ministry of MSME), para 3.2 & 8.1", cell_style), Paragraph("Scheme Rule", cell_style)])
+    prov_rows.append([Paragraph("MUDRA loan categories", cell_style), Paragraph(tiers, bold_cell_style),
+                      Paragraph("PIB, Ministry of Finance, 29.10.2024", cell_style), Paragraph("Scheme Rule", cell_style)])
+    prov_rows.append([Paragraph("DSCR / cash flow", cell_style), Paragraph("Not computed", bold_cell_style),
+                      Paragraph("No official source for income and operating costs", cell_style), Paragraph("DATA_NOT_AVAILABLE", cell_style)])
+    prov_table = Table(prov_rows, colWidths=[140, 95, 215, 85])
+    prov_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2b6cb0")),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.lightgrey),
-        ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#feebc8")),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ]))
-    story.append(s_table)
-    story.append(Spacer(1, 6))
+    story.append(prov_table)
+    story.append(Spacer(1, 3))
 
-    # 7. NABARD Benchmark Summary
-    story.append(Paragraph("7. NABARD District Economic Feasibility Reference", heading2_style))
-    nabard_text = (
-        f"This enterprise proposal for <b>{trade_name}</b> in <b>{district_name}</b> has been cross-referenced with "
-        f"NABARD unit cost benchmarks for rural micro-enterprises. With a projected average DSCR exceeding 1.70, "
-        f"the proposed unit demonstrates strong repayment capacity, sustainable cash flows, and full compliance with "
-        f"RBI Priority Sector Lending (PSL) micro-credit guidelines."
-    )
-    story.append(Paragraph(nabard_text, cell_style))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 3))
 
     # 8. Field Verification & Signatures Box
-    story.append(Paragraph("8. SCA Field Verification & Bank Concurrence", heading2_style))
+    story.append(Paragraph("7. SCA Field Verification & Bank Concurrence", heading2_style))
     verif_text = (
         "<b>Field Officer Verification ID:</b> _________________________ &nbsp;&nbsp;&nbsp;&nbsp; "
         "<b>GPS Geotag:</b> Lat: ____________, Long: ____________ (&plusmn;5m)<br/>"

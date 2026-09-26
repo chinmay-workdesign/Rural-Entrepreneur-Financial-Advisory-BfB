@@ -39,7 +39,8 @@ class EnterpriseProposal(Base):
     sanctioned_loan = Column(Numeric(12, 2), nullable=False)
     beneficiary_margin = Column(Numeric(12, 2), nullable=False)
     monthly_emi = Column(Numeric(10, 2), nullable=False)
-    projected_dscr = Column(Numeric(4, 2), nullable=False)
+    # NULL when no official benchmark exists for the trade (REAL_DATA_ONLY)
+    projected_dscr = Column(Numeric(4, 2), nullable=True)
     status = Column(String(30), default="DRAFT", index=True)  # DRAFT, SANCTIONED, REJECTED, REVISIT
     dpr_pdf_url = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -73,6 +74,16 @@ class WebhookEvent(Base):
     received_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class BotControl(Base):
+    """On/off switch for each chat channel, set from the officer dashboard. Survives restarts."""
+    __tablename__ = "bot_controls"
+
+    channel = Column(String(20), primary_key=True)  # telegram, whatsapp
+    enabled = Column(Boolean, nullable=False, default=True)
+    changed_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    changed_by = Column(String(120), nullable=True)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -86,3 +97,17 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+
+class ProposalSnapshot(Base):
+    """
+    What the applicant stated and what the scheme rules produced, stored with the application so the officer
+    dashboard keeps it even after the applicant starts a new conversation. Officer remarks are logged here too.
+    """
+    __tablename__ = "proposal_snapshots"
+
+    id = Column(String(36), primary_key=True, default=make_uuid)
+    proposal_id = Column(String(36), ForeignKey("enterprise_proposals.id", ondelete="CASCADE"), nullable=False,
+                         unique=True, index=True)
+    data = Column(JSON, default=dict)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -17,3 +17,6 @@ generated_dprs/
 static/dprs/
 *.pdf
 *.log
+
+# Generated vector index (rebuilt at startup / via `python -m app.retrieval.ingest`)
+data/qdrant_db/

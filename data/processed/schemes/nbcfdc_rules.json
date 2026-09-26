@@ -1,0 +1,110 @@
+{
+  "scheme_name": "NBCFDC Individual Loan Scheme (Backward Classes)",
+  "issuing_authority": "National Backward Classes Finance & Development Corporation (NBCFDC)",
+  "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+  "effective_from": "2025-04-01",
+  "channel": "Channel Partners: State Channelising Agencies and banks (Karnataka: D. Devaraj Urs Backward Classes Development Corporation lists NBCFDC schemes)",
+  "rules": [
+    {
+      "rule_id": "NBCFDC_ELIGIBLE_CATEGORY",
+      "parameter": "ELIGIBLE_SOCIAL_CATEGORY",
+      "value": "OBC",
+      "conditions": "Members of Backward Classes as notified by Central/State Governments",
+      "source_id": "NBCFDC_INDIVIDUAL_LOAN_PAGE",
+      "section": "Eligibility (a)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "NBCFDC_MAX_FAMILY_INCOME",
+      "parameter": "MAX_ANNUAL_FAMILY_INCOME",
+      "value": 500000.0,
+      "conditions": "Applicant's annual family income up to Rs 5.00 lakh",
+      "source_id": "NBCFDC_INDIVIDUAL_LOAN_PAGE",
+      "section": "Eligibility (b)",
+      "verification_status": "VERIFIED",
+      "unit": "INR"
+    },
+    {
+      "rule_id": "NBCFDC_IND_MAX_LOAN",
+      "parameter": "MAX_LOAN",
+      "value": 2500000.0,
+      "conditions": "Per beneficiary, income generating activities",
+      "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+      "section": "Individual Loan Scheme (a)",
+      "verification_status": "VERIFIED",
+      "unit": "INR"
+    },
+    {
+      "rule_id": "NBCFDC_IND_LOAN_PCT",
+      "parameter": "LOAN_PCT_OF_PROJECT_COST",
+      "value": 85.0,
+      "conditions": "NBCFDC share 85%; Channel Partner/Beneficiary share 15%",
+      "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+      "section": "Individual Loan Scheme (a)",
+      "verification_status": "VERIFIED",
+      "unit": "PERCENT"
+    },
+    {
+      "rule_id": "NBCFDC_IND_SLAB1_UPTO",
+      "parameter": "SLAB_MAX_LOAN",
+      "value": 125000.0,
+      "conditions": "Upper limit of the first interest slab",
+      "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+      "section": "Individual Loan Scheme (a)",
+      "verification_status": "VERIFIED",
+      "unit": "INR"
+    },
+    {
+      "rule_id": "NBCFDC_IND_SLAB1_INTEREST",
+      "parameter": "BENEFICIARY_INTEREST_PCT",
+      "value": 7.0,
+      "conditions": "Loan up to Rs 1.25 lakh",
+      "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+      "section": "Individual Loan Scheme (a)",
+      "verification_status": "VERIFIED",
+      "unit": "PERCENT_PA"
+    },
+    {
+      "rule_id": "NBCFDC_IND_SLAB1_REPAYMENT",
+      "parameter": "REPAYMENT_MONTHS",
+      "value": 48,
+      "conditions": "Loan up to Rs 1.25 lakh: 4 years; moratorium 1 quarter",
+      "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+      "section": "Individual Loan Scheme (a)",
+      "verification_status": "VERIFIED",
+      "unit": "MONTHS",
+      "moratorium_months": 3
+    },
+    {
+      "rule_id": "NBCFDC_IND_SLAB2_INTEREST",
+      "parameter": "BENEFICIARY_INTEREST_PCT",
+      "value": 8.0,
+      "conditions": "Loan Rs 1.25 lakh to Rs 25 lakh",
+      "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+      "section": "Individual Loan Scheme (a)",
+      "verification_status": "VERIFIED",
+      "unit": "PERCENT_PA"
+    },
+    {
+      "rule_id": "NBCFDC_IND_SLAB2_REPAYMENT",
+      "parameter": "REPAYMENT_MONTHS",
+      "value": 84,
+      "conditions": "Loan Rs 1.25 lakh to Rs 25 lakh: 7 years; moratorium 1 quarter",
+      "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+      "section": "Individual Loan Scheme (a)",
+      "verification_status": "VERIFIED",
+      "unit": "MONTHS",
+      "moratorium_months": 3
+    },
+    {
+      "rule_id": "NBCFDC_TIMELY_REBATE",
+      "parameter": "TIMELY_PAYMENT_REBATE_PCT",
+      "value": 1.0,
+      "conditions": "Annual rebate for timely payment, shared equally between channel partner and beneficiary",
+      "source_id": "NBCFDC_PATTERN_OF_FINANCE_2025",
+      "section": "Note",
+      "verification_status": "VERIFIED",
+      "unit": "PERCENT_PA"
+    }
+  ]
+}

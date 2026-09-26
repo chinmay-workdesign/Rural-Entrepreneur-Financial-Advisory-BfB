@@ -1,0 +1,81 @@
+{
+  "scheme_name": "Pradhan Mantri MUDRA Yojana (PMMY) borrower loan categories",
+  "issuing_authority": "Ministry of Finance (Press Information Bureau)",
+  "source_id": "PIB_PMMY_LIMIT_20_LAKH_2024",
+  "effective_from": "2024-10-24",
+  "rules": [
+    {
+      "rule_id": "PMMY_SHISHU",
+      "parameter": "CATEGORY_MAX_LOAN",
+      "value": 50000.0,
+      "conditions": "Shishu: loans up to Rs 50,000",
+      "source_id": "PIB_PMMY_LIMIT_20_LAKH_2024",
+      "section": "MUDRA Loans: Categories",
+      "verification_status": "VERIFIED",
+      "unit": "INR",
+      "source_page": 3
+    },
+    {
+      "rule_id": "PMMY_KISHORE",
+      "parameter": "CATEGORY_MAX_LOAN",
+      "value": 500000.0,
+      "conditions": "Kishore: above Rs 50,000 up to Rs 5 lakh",
+      "source_id": "PIB_PMMY_LIMIT_20_LAKH_2024",
+      "section": "MUDRA Loans: Categories",
+      "verification_status": "VERIFIED",
+      "unit": "INR",
+      "source_page": 3
+    },
+    {
+      "rule_id": "PMMY_TARUN",
+      "parameter": "CATEGORY_MAX_LOAN",
+      "value": 1000000.0,
+      "conditions": "Tarun: above Rs 5 lakh up to Rs 10 lakh",
+      "source_id": "PIB_PMMY_LIMIT_20_LAKH_2024",
+      "section": "MUDRA Loans: Categories",
+      "verification_status": "VERIFIED",
+      "unit": "INR",
+      "source_page": 3
+    },
+    {
+      "rule_id": "PMMY_TARUN_PLUS",
+      "parameter": "CATEGORY_MAX_LOAN",
+      "value": 2000000.0,
+      "conditions": "Tarun Plus: Rs 10 lakh to Rs 20 lakh, only for borrowers who availed and successfully repaid a Tarun loan",
+      "source_id": "PIB_PMMY_LIMIT_20_LAKH_2024",
+      "section": "MUDRA Loans: Categories",
+      "verification_status": "VERIFIED",
+      "unit": "INR",
+      "source_page": 3
+    },
+    {
+      "rule_id": "PMMY_COLLATERAL_FREE",
+      "parameter": "COLLATERAL",
+      "value": "NONE",
+      "conditions": "Collateral-free loans up to Rs 20 lakh by Member Lending Institutions; CGFMU guarantee cover",
+      "source_id": "PIB_PMMY_LIMIT_20_LAKH_2024",
+      "section": "MUDRA Loans: Categories",
+      "verification_status": "VERIFIED",
+      "source_page": 2
+    },
+    {
+      "rule_id": "PMMY_ELIGIBLE_ACTIVITIES",
+      "parameter": "ELIGIBLE_ACTIVITIES",
+      "value": [
+        "MANUFACTURING",
+        "TRADING",
+        "SERVICES",
+        "ALLIED_AGRICULTURE"
+      ],
+      "conditions": "Income generating activities",
+      "source_id": "PIB_PMMY_LIMIT_20_LAKH_2024",
+      "section": "MUDRA Loans: Categories",
+      "verification_status": "VERIFIED",
+      "source_page": 2
+    }
+  ],
+  "not_specified_by_source": [
+    "borrower interest rate (decided by lending institution)",
+    "borrower own contribution / loan-to-cost ratio"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "scheme_name": "Pradhan Mantri MUDRA Yojana (PMMY) / Micro Units Development & Refinance Agency",
+  "issuing_authority": "Micro Units Development & Refinance Agency Limited (MUDRA)",
+  "source_id": "PMMY_PARTNER_ELIGIBILITY",
+  "source_document": "PMMY Eligibility.pdf",
+  "document_title": "Broad Eligibility Criteria for Partner Institutions",
+  "document_type": "INSTITUTIONAL_REFINANCE_CRITERIA",
+  "extracted_parameters": [
+    {
+      "rule_id": "PMMY_MAX_REFINANCE_ELIGIBLE_LOAN_CEILING",
+      "parameter": "MAX_REFINANCE_LOAN_CEILING",
+      "value": 2000000.0,
+      "unit": "INR",
+      "conditions": "Refinance shall be provided for eligible loans up to ₹20 Lakh extended by partner banks to micro units in manufacturing, trading, and service sectors in rural and urban areas",
+      "source_page": 1,
+      "section": "Broad Eligibility Criteria, Para 2",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMMY_REFINANCE_TENURE_MAX",
+      "parameter": "REFINANCE_MAX_TENURE",
+      "value": 3,
+      "unit": "YEARS",
+      "conditions": "Not exceeding 3 years from the date of disbursement, with moratorium period not exceeding 36 months",
+      "source_page": 4,
+      "section": "Table item E (Period of Refinance)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMMY_ELIGIBLE_BORROWER_SECTORS",
+      "parameter": "TARGET_SECTORS",
+      "value": ["MANUFACTURING", "TRADING", "SERVICE"],
+      "area": ["RURAL", "URBAN"],
+      "source_page": 1,
+      "section": "Broad Eligibility Criteria, Para 1",
+      "verification_status": "VERIFIED"
+    }
+  ],
+  "unverified_parameters_in_application": [
+    {
+      "parameter": "SHISHU_LOAN_CAP",
+      "application_value": 50000.0,
+      "status": "DATA_NOT_AVAILABLE_IN_THIS_DOCUMENT",
+      "reason": "Document data/raw/schemes/PMMY Eligibility.pdf is an institutional partner bank refinance criteria document. It does not mention the borrower-facing tier thresholds ('Shishu', 'Kishore', 'Tarun') or individual borrower margin requirements."
+    },
+    {
+      "parameter": "KISHORE_LOAN_CAP",
+      "application_value": 500000.0,
+      "status": "DATA_NOT_AVAILABLE_IN_THIS_DOCUMENT",
+      "reason": "Borrower product brochure/circular from DFS/MUDRA required."
+    },
+    {
+      "parameter": "TARUN_LOAN_CAP",
+      "application_value": 1000000.0,
+      "status": "DATA_NOT_AVAILABLE_IN_THIS_DOCUMENT",
+      "reason": "Borrower product brochure/circular from DFS/MUDRA required. (Note: Document page 1 mentions overall refinance ceiling expanded to ₹20 Lakh)."
+    }
+  ]
+}

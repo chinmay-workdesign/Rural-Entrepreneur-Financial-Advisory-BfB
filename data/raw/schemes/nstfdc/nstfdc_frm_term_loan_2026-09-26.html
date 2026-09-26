@@ -1,0 +1,451 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge" /><meta name="viewport" content="width=device-width; initial-scale=1.0" /><title>
+	frm_term_loan
+</title><link href="assets/css/bootstrap5.min.css" rel="stylesheet" type="text/css" /><link rel="icon" href="assets/images/favicon.png" sizes="20x20" type="image/png" /><link rel="stylesheet" type="text/css" href="assets/css/Style.css" title="styles1" /><link rel="stylesheet" type="text/css" href="assets/css/Style-black.css" title="styles2" />
+
+
+  
+<script src="assets/js/jquery.sheetswitch.js" type="text/javascript"></script>
+<!--Slider start-->
+<link rel="stylesheet" href="assets/css/responsiveslides.css" />
+<script type="text/javascript" src="assets/js/responsiveslides.min.js"></script>
+
+    <link href="assets/css/Paging.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript">
+    // You can also use "$(window).load(function() {"
+    $(function () {
+        $("#slider4").responsiveSlides({
+            auto: true,
+            pager: false,
+            nav: true,
+            speed: 500,
+            namespace: "callbacks",
+            before: function () {
+                $('.events').append("<li>before event fired.</li>");
+            },
+            after: function () {
+                $('.events').append("<li>after event fired.</li>");
+            }
+        });
+    });
+</script>
+<script type="text/javascript">
+    var myscale = 1;
+    function zoomIn() {
+        var Page = document.getElementById('Body');
+        var zoom = parseInt(Page.style.zoom) + 10 + '%'
+        myscale = myscale + 0.1
+        var zoom1 = "scale(" + myscale + ")"
+        Page.style.zoom = zoom;
+        Page.style.MozTransform = zoom1;
+        Page.style.MozTransformOrigin = "0 0";
+        return false;
+    }
+
+    function zoomOut() {
+        var Page = document.getElementById('Body');
+        var zoom = parseInt(Page.style.zoom) - 10 + '%'
+        myscale = myscale - 0.1;
+        var zoom1 = "scale(" + myscale + ")"
+        Page.style.zoom = zoom;
+        Page.style.MozTransform = zoom1;
+        Page.style.MozTransformOrigin = "0 0";
+        return false;
+    }
+
+    function popupwindow(url, title, w, h) {
+        var left = (screen.width / 2) - (w / 2);
+        var top = (screen.height / 2) - (h / 2);
+        return window.open(url, title, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width=' + w + ', height=' + h + ', top=' + top + ', left=' + left);
+    }
+
+
+    $(document).ready(function () {
+
+        //Check to see if the window is top if not then display button
+        $(window).scroll(function () {
+            if ($(this).scrollTop() > 100) {
+                $('.scrollToTop').fadeIn();
+            } else {
+                $('.scrollToTop').fadeOut();
+            }
+        });
+
+        //Click event to scroll to top
+        $('.scrollToTop').click(function () {
+            $('html, body').animate({ scrollTop: 0 }, 800);
+            return false;
+        });
+
+    });
+
+</script>
+<!--Slider Close-->
+<!--Font size start-->
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#incfont').click(function () {
+            curSize = parseInt($('.innerPanel').css('font-size')) + 2;
+            if (curSize <= 18)
+                $('.innerPanel').css('font-size', curSize);
+        });
+
+        $('#decfont').click(function () {
+            curSize = parseInt($('.innerPanel').css('font-size')) - 2;
+            if (curSize >= 11)
+                $('.innerPanel').css('font-size', curSize);
+        });
+
+        $('#resetfont').click(function () {
+            curSize = parseInt($('.innerPanel').css('font-size')) - 0;
+            if (curSize = 14)
+                $('.innerPanel').css('font-size', curSize);
+        });
+    });
+</script>
+<!--Font size close-->
+<script type="text/javascript">
+    $(function () {
+        $(".theme1").on("click", function () {
+            $('#imgChange2').attr('src', 'assets/images/logo.png');
+        });
+
+        $(".theme2").on("click", function () {
+            $('#imgChange2').attr('src', 'assets/images/logo2.png');
+        });
+        var c = readCookie('style');
+        if (c == 'styles2') {
+            $('#imgChange2').attr('src', 'assets/images/logo.png');
+        } else {
+            $('#imgChange2').attr('src', 'assets/images/logo.png');
+        }
+    });
+</script>
+<script type="text/javascript">
+    $(function () {
+        $(".theme1").on("click", function () {
+            $('#imgChange3').attr('src', 'assets/images/digital_india.png');
+        });
+
+        $(".theme2").on("click", function () {
+            $('#imgChange3').attr('src', 'assets/images/digital_india2.png');
+        });
+        var c = readCookie('style');
+        if (c == 'styles2') {
+            $('#imgChange3').attr('src', 'assets/images/digital_india.png');
+        } else {
+            $('#imgChange3').attr('src', 'assets/images/digital_india.png');
+        }
+    });
+</script>
+<script type="text/javascript">
+    $(function () {
+        $("#navDemo").bootstrapDropdownOnHover();
+    });
+</script>
+    
+    </head>
+<body >
+    <form method="post" action="./frm_term_loan.aspx" id="form1">
+<div class="aspNetHidden">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUKMTAyMTMzODg1Ng9kFgJmD2QWAgIDD2QWAgIBD2QWAgIBDxYEHgRNb2RlCyolU3lzdGVtLldlYi5VSS5XZWJDb250cm9scy5MaXRlcmFsTW9kZQEeBFRleHQF2yg8cD5UZXJtIGxvYW5zIGFyZSBhdmFpbGFibGUgdG8gdHJpYmFsIGJlbmVmaWNpYXJpZXMgZm9yIHNldHRpbmcgdXAgdGhlaXIgdmlhYmxlIEluY29tZSBHZW5lcmF0aW5nIFZlbnR1cmVzIGluIGFueSBvZiB0aGUgc2VjdG9ycyB2aXouIEluZHVzdHJpYWwsIEFncmljdWx0dXJhbCBhbmQgU2VydmljZSBTZWN0b3IuwqAgPGJyIC8+PC9wPiAgPHA+VGhlIGxvYW5zIGFyZSBnaXZlbiBiYXNlZCBvbiByZXF1aXJlbWVudCBvZiB0aGUgdW5pdCB0aHJvdWdoIFN0YXRlIENoYW5uZWxpemluZyBBZ2VuY2llcy4gVGhlIGJlbmVmaWNpYXJpZXMgaGF2ZSB0byBmdWxsIGZpbGwgdGhlIGVsaWdpYmlsaXR5IGNyaXRlcmlhIG9mIHRoZSBTQ0FzIGFuZCBjb21wbHkgd2l0aCB0aGUgdGVybXMgYW5kIGNvbmRpdGlvbnMgb2YgdGhlIGxlbmRpbmcgYnkgdGhlIFNDQS4gPGJyIC8+PC9wPiAgPHRhYmxlIGNsYXNzPSJ0YWJsZSB0YWJsZS1ib3JkZXJlZCB0YWJsZS1jb25kZW5zZWQiPiAgICAgICA8dGJvZHk+ICAgICAgICAgICA8dHI+ICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIxNDAiPiAgICAgICAgICAgICAgIDxwPjxzdHJvbmc+VW5pdCBDb3N0PC9zdHJvbmc+PC9wPiAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgPHRkIGNvbHNwYW49IjMiIHdpZHRoPSI0NzIiPiAgICAgICAgICAgICAgIDxwPlZpYWJsZSBQcm9qZWN0cy9Vbml0cyBjb3N0aW5nIHVwIHRvIOKCuTUwLjAwIGxha2hzPC9wPiAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICA8L3RyPiAgICAgICAgICAgPHRyPiAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMTQwIj4gICAgICAgICAgICAgICA8cD48c3Ryb25nPlF1YW50dW0gb2YgTG9hbiBBc3Npc3RhbmNlPC9zdHJvbmc+PC9wPiAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgPHRkIGNvbHNwYW49IjMiIHdpZHRoPSI0NzIiPiAgICAgICAgICAgICAgIDxwPlVwdG8gOTAlIG9mIHVuaXQgY29zdCBpcyBwcm92aWRlZCBieSBOU1RGREMgYXMgdGVybSBsb2FuPC9wPiAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICA8L3RyPiAgICAgICAgICAgPHRyPiAgICAgICAgICAgICAgIDx0ZCBjb2xzcGFuPSI0IiB3aWR0aD0iNjEyIj4gICAgICAgICAgICAgICA8cD48c3Ryb25nPlByb21vdGVycyBDb250cmlidXRpb246IDwvc3Ryb25nPjwvcD4gICAgICAgICAgICAgICA8dGFibGUgY2xhc3M9InRhYmxlIHRhYmxlLWJvcmRlcmVkIHRhYmxlLWNvbmRlbnNlZCIgd2lkdGg9IjQ4MiI+ICAgICAgICAgICAgICAgICAgIDx0Ym9keT4gICAgICAgICAgICAgICAgICAgICAgIDx0cj4gICAgICAgICAgICAgICAgICAgICAgICAgICA8dGQgd2lkdGg9IjM3Ij4gICAgICAgICAgICAgICAgICAgICAgICAgICA8cD7CoDwvcD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMjg0Ij4gICAgICAgICAgICAgICAgICAgICAgICAgICA8cD48c3Ryb25nPkNvc3QgcGVyIFVuaXQ8L3N0cm9uZz48L3A+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8dGQgd2lkdGg9IjE2MSI+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPHA+PHN0cm9uZz5NaW5pbXVtIENvbnRyaWJ1dGlvbjwvc3Ryb25nPjwvcD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgICAgICAgICAgPC90cj4gICAgICAgICAgICAgICAgICAgICAgIDx0cj4gICAgICAgICAgICAgICAgICAgICAgICAgICA8dGQgd2lkdGg9IjM3Ij4gICAgICAgICAgICAgICAgICAgICAgICAgICA8cD5hKTwvcD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMjg0Ij4gICAgICAgICAgICAgICAgICAgICAgICAgICA8cD5VcHRvIOKCuSAxLjAwIExha2g8L3A+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8dGQgd2lkdGg9IjE2MSI+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPHA+Tm90IHRvIGJlIGluc2lzdGVkIHVwb248L3A+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgICAgICAgICAgICAgIDwvdHI+ICAgICAgICAgICAgICAgICAgICAgICA8dHI+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIzNyI+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPHA+Yik8L3A+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8dGQgd2lkdGg9IjI4NCI+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPHA+QWJvdmUg4oK5IDEuMDAgbGFraCBhbmQgdXB0byDigrkgMi41MCBsYWtoPC9wPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIxNjEiPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDxwPjIlPC9wPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgICAgICAgICA8L3RyPiAgICAgICAgICAgICAgICAgICAgICAgPHRyPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMzciPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDxwPmMpPC9wPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIyODQiPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDxwPkFib3ZlIOKCuSAyLjUwIGxha2ggYW5kIHVwdG8g4oK5IDUuMDAgbGFraDwvcD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMTYxIj4gICAgICAgICAgICAgICAgICAgICAgICAgICA8cD4zJTwvcD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgICAgICAgICAgPC90cj4gICAgICAgICAgICAgICAgICAgICAgIDx0cj4gICAgICAgICAgICAgICAgICAgICAgICAgICA8dGQgd2lkdGg9IjM3Ij4gICAgICAgICAgICAgICAgICAgICAgICAgICA8cD5kKTwvcD4gICAgICAgICAgICAgICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMjg0Ij4gICAgICAgICAgICAgICAgICAgICAgICAgICA8cD5BYm92ZSDigrkgNS4wMCBsYWtoPC9wPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIxNjEiPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDxwPjUlPC9wPiAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgICAgICAgICA8L3RyPiAgICAgICAgICAgICAgICAgICA8L3Rib2R5PiAgICAgICAgICAgICAgIDwvdGFibGU+ICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgIDwvdHI+ICAgICAgICAgICA8dHI+ICAgICAgICAgICAgICAgPHRkIHJvd3NwYW49IjQiIHdpZHRoPSIxNDAiPiAgICAgICAgICAgICAgIDxwPjxzdHJvbmc+SW50ZXJlc3QgUmF0ZTwvc3Ryb25nPjwvcD4gICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMTg5Ij4gICAgICAgICAgICAgICA8cD48c3Ryb25nPkxvYW4gQW1vdW50PC9zdHJvbmc+PC9wPiAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIxMTMiPiAgICAgICAgICAgICAgIDxwPjxzdHJvbmc+U0NBPC9zdHJvbmc+PC9wPiAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIxNzAiPiAgICAgICAgICAgICAgIDxwPjxzdHJvbmc+QmVuZWZpY2lhcmllczwvc3Ryb25nPjwvcD4gICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgPC90cj4gICAgICAgICAgIDx0cj4gICAgICAgICAgICAgICA8dGQgd2lkdGg9IjE4OSI+ICAgICAgICAgICAgICAgPHA+VGVybSBMb2FuIHVwIHRvIOKCuSA1LjAwIGxha2g8L3A+ICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgICAgICA8dGQgd2lkdGg9IjExMyI+ICAgICAgICAgICAgICAgPHA+MyU8L3A+ICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgICAgICA8dGQgd2lkdGg9IjE3MCI+ICAgICAgICAgICAgICAgPHA+NiU8L3A+ICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgIDwvdHI+ICAgICAgICAgICA8dHI+ICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIxODkiPiAgICAgICAgICAgICAgIDxwPlVwdG8g4oK5MTAuMDAgbGFraDwvcD4gICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMTEzIj4gICAgICAgICAgICAgICA8cD41JTwvcD4gICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMTcwIj4gICAgICAgICAgICAgICA8cD44JTwvcD4gICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgPC90cj4gICAgICAgICAgIDx0cj4gICAgICAgICAgICAgICA8dGQgd2lkdGg9IjE4OSI+ICAgICAgICAgICAgICAgPHA+QWJvdmUg4oK5MTAuMDAgbGFraDwvcD4gICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMTEzIj4gICAgICAgICAgICAgICA8cD43JTwvcD4gICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgIDx0ZCB3aWR0aD0iMTcwIj4gICAgICAgICAgICAgICA8cD4xMCU8L3A+ICAgICAgICAgICAgICAgPC90ZD4gICAgICAgICAgIDwvdHI+ICAgICAgICAgICA8dHI+ICAgICAgICAgICAgICAgPHRkIHdpZHRoPSIxNDAiPiAgICAgICAgICAgICAgIDxwPjxzdHJvbmc+UmVwYXltZW50IFBlcmlvZDwvc3Ryb25nPjwvcD4gICAgICAgICAgICAgICA8L3RkPiAgICAgICAgICAgICAgIDx0ZCBjb2xzcGFuPSIzIiB3aWR0aD0iNDcyIj4gICAgICAgICAgICAgICA8cD5UaGUgbG9hbiBpcyB0byBiZSByZXBhaWQgaW4gcXVhcnRlcmx5IGluc3RhbGxtZW50cyB3aXRoaW4gYSBtYXhpbXVtIHBlcmlvZCBvZiA1IHllYXJzIGluY2x1ZGluZyBtb3JhdG9yaXVtIHBlcmlvZC4gSW4gY2FzZSBvZiByZWZpbmFuY2UsIGl0IHdpbGwgYmUgbGlua2VkIHRvIHJlcGF5bWVudCBwZXJpb2QgZml4ZWQgYnkgQmFua3MuPC9wPiAgICAgICAgICAgICAgIDwvdGQ+ICAgICAgICAgICA8L3RyPiAgICAgICA8L3Rib2R5PiAgPC90YWJsZT5kZDh53VmmQDRZzvhP+Ex90LDWx3AoyF8bki1XTSTRvcOl" />
+</div>
+
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="22B0CC51" />
+</div>
+ <div class="topheader">
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-7 text-left"> <a href="#" target="_blank"><img src="assets/images/ind_gov.jpg" alt="" title=""/></a> &nbsp;|&nbsp; 
+      <a href="#main_content">Skip to Main Content</a>&nbsp &nbsp 
+      <a href="#">Screen Reader Access</a>&nbsp 
+      <a href="javascript:void(0);" class="fntInc" id="decfont">A-</a>&nbsp 
+      <a href="javascript:void(0);" class="fntInc"  id="resetfont">A</a>&nbsp 
+      <a href="javascript:void(0);" class="fntInc" id="incfont">A+</a>&nbsp 
+      <a href="javascript:void(0);" class="fntInc whlTe styleswitch theme1" rel="styles1">A</a>&nbsp 
+      <a href="javascript:void(0);" class="fntInc black styleswitch theme2" rel="styles2">A</a>&nbsp;</a> |&nbsp; 
+      <a href="Default.aspx" target="_blank">English</a> &nbsp; <a href="PublicView_Hindi/Default.aspx" target="_blank">हिन्दी</a> &nbsp;|&nbsp; </div>
+      <div class="col-lg-5 text-right"> <a href="Login.aspx"><i class="fa  fa-user"></i> Login</a>&nbsp; <a href="SCAMaster.aspx"><i class="fa  fa-pencil"></i> Register</a>&nbsp; <a href="frm_contactus.aspx"><i class="fa  fa-phone"></i> Contact Us</a>&nbsp;&nbsp;|&nbsp; <a href="#"><i class="fa  fa-facebook fcbk"></i></a> <a href="#"><i class="fa  fa-twitter twtr"></i></a> <a href="#"><i class="fa  fa-wifi wfi"></i></a> </div>
+    </div>
+  </div>
+</div>
+<div class="container header">
+  <div class="row">
+    <div class="col-md-6"> <a href="#" class="logo"><img src="images/logo.png" alt="" class="img-responsive digi_logo"  id="imgChange2"></a></div>
+    <div class="col-md-6">
+      <div class="row">
+        
+        <div class="col-sm-6 col-md-7">
+    	<div class="nstfdc_logo">
+    	<img src="assets/images/digital_india.png" alt="call-us" class="img-responsive" id="imgChange3"/>
+        </div>
+        </div><div class="col-xs-12 col-sm-6 col-md-5">
+          <div id="custom-search-input">
+            <div class="input-group">
+              <input type="text" class="form-control input-lg" placeholder="Search..." />
+              <span class="input-group-btn">
+              <button class="btn btn-info btn-lg" type="button"> <i class="fa fa-search"></i> </button>
+              </span> </div>
+          </div>
+        </div>
+      </div>
+    </div> 
+    
+  </div>
+</div>
+  <nav class="navbar navMenu navbar-expand-lg">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar"><i class="fa fa-bars fa-fw"></i></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button>
+    </div>
+    <div id="Div1" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav">
+        <li><a href="Default.aspx"><i class="fa fa-home fa-lg"></i></a></li>
+        <li class="dropdown"> <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Organization</a>
+          <ul class="dropdown-menu">
+            <li><a  href="frm_about_us.aspx">About us</a></li>
+             <li><a  href="frm_mission_vision.aspx">Mission & Vision</a></li>
+             <li><a  href="frm_objectives.aspx">Our Objectives</a></li>
+                <!-- <li><a  href="UploadData/pdf/citizen-Charter-2022.pdf" target="_blank">Citizen Charter</a></li> -->
+                 <li><a  href="frm_functions.aspx">Functions</a></li>
+                  <li><a  href="frm_share_capital.aspx">Share Capital</a></li>
+            <li><a  href="frm_chairman_cum_md.aspx">CMD's Message</a></li>
+             <li><a  href="frm_board_of_directors.aspx">Board of Directors</a></li>
+             <li><a  href="UploadData/pdf/TEAM_NSTFDC.xlsx">Team NSTFDC</a></li>
+             <li><a  href="UploadData/pdf/Organisational_Chart.pdf" target="_blank">Organisational Chart</a></li>
+            <li class="dropdown-submenu men "><a href="#">CSR</a>
+            <ul class="dropdown-menu">
+                <li><a  href="UploadData/pdf/CSR_Policy_of_NSTFDC.pdf" target="_blank">CSR Policy of NSTFDC</a></li>
+                <li><a  href="UploadData/pdf/Guidelines_for_Application-of_CSR_Project.pdf" target="_blank">Guidelines for Application of CSR Project</a></li>
+                <li><a  href="UploadData/pdf/CSR_Committee.pdf" target="_blank">CSR Committee</a></li> 
+                <li><a  href="UploadData/pdf/CSR_Projects_NSTFDC.pdf" target="_blank">CSR Projects of NSTFDC</a></li>
+            </ul>
+            </li>
+             <!-- <li><a  href="UploadData/pdf/CSR_Policy_of_NSTFDC.pdf">CSR</a></li>-->
+			  <li><a  href="frm_brouchers.aspx">Brochures</a></li>
+			   <li><a  href="frm_awards_certification.aspx">Awards &amp; Certifications</a></li>
+            
+            
+          
+          
+   
+          </ul>
+        </li>
+   
+         <li class="dropdown"> <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Schemes & Programmes </a>
+          <ul class="dropdown-menu">
+          <li><a  href="frm_sed.aspx">Skill & Entreprenual Development Programme</a></li>
+           <li><a  href="frm_term_loan.aspx">Term Loans</a></li>
+           <!-- <li><a  href="frm_bridge_loan.aspx">Bridge Loans</a></li> -->
+           <li><a  href="frm_amsy.aspx">Adivasi Mahila Sashaktikaran Yojana (AMSY)</a></li>
+           <li><a  href="frm_asry.aspx">Adivasi Shikha Rrinn Yojana (ASRY)</a></li>
+           <li><a  href="frm_mcs.aspx">Micro-credit schemes (MCS)</a></li>
+          <li><a  href="frm_tfdes.aspx">Tribal Forest Dwellers Empowerment Scheme</a></li>
+           <li><a  href="frm_assistance.aspx">Assistance to TRIFED empanelled ST Artisans</a></li>
+            <li><a  href="frm_msa.aspx">Marketing Support Assistance</a></li>
+              <li><a  href="frm_lending.aspx">Lending to NGOs/EVAs</a></li>
+	  <li><a  href="UploadData/pdf/Stand_Up_India.pdf" target="_blank">Margin Money Support Scheme</a></li>
+          </ul>
+ 		  </li>
+		   <li class="dropdown"  > <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Lending Norms </a>
+          <ul class="dropdown-menu">
+            <li><a  href="frm_eligibility.aspx">Eligibility</a></li>
+           <li><a  href="frm_gurantee.aspx">Guarantee</a></li>
+           <li><a  href="frm_loan_repayment.aspx">Repayment of Loan</a></li>
+           <li><a  href="frm_utilization.aspx">Utilization</a></li>
+           <li><a  href="frm_fund_allocations.aspx">Allocation of funds</a></li>
+           <li><a  href="frm_disbursement.aspx">Disbursements</a></li>          
+          </ul>
+           </li>
+           <li class="dropdown"  > <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Help Zone </a>
+            <ul class="dropdown-menu">
+            <li><a  href="frm_how_to_apply.aspx">How to Apply</a></li>
+             <li><a  href="UploadData/pdf/List_of_Addresses_of_SCAs.pdf" target="_blank">SCA List</a></li>
+	    <!--<li><a  href="frm_sca_state.aspx">SCA List</a></li>-->
+              <li><a  href="frm_zonal_offices.aspx">Zonal Offices</a></li>
+              <li><a  href="frm_forms.aspx">Download Form</a></li>
+                <li><a  href="frm_indicative_schemes.aspx">Indicative Schemes</a></li>
+                 <li><a  href="frm_model_project_profiles.aspx">Model Project Profiles</a></li>
+                  <li><a  href="frm_useful_link.aspx">Useful Links</a></li>
+                     <li><a  href="frm_bank.aspx">Banks</a></li>
+                       <li><a  href="UploadData/pdf/Citizen_Charter_2026.pdf" target="_blank">Citizen Charter</a></li>
+						<li><a  href="UploadData/pdf/PPP.pdf">Public Procurement Policy</a></li>
+						<li><a  href="UploadData/pdf/Annual_Purchase_Plan_MSME_2026-27.pdf" target="_blank">MSME Annual Procurement Plan</a></li>
+            </ul>
+           </li>
+
+             <li class="dropdown"  style="display:none;"> <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Eligibility Criteria </a>
+          <ul class="dropdown-menu">
+          <li><a  href="frm_individuals.aspx">Individuals</a></li>
+          <li><a  href="frm_cooperative_society.aspx">Cooperative Society</a></li>
+          <li><a  href="frm_shg.aspx">SHGs</a></li>
+         
+          </ul>
+          </li>
+           
+           <li class="dropdown"> <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">States</a>
+          <ul class="dropdown-menu">
+           <!--<li><a  href="State_Map.aspx">State Map</a></li>
+	   <li><a  href="frm_sc_in_state.aspx">Scheduled Tribes In state</a></li>-->
+           <li style="display:none;"> <a  href="frm_population.aspx">District, Blocks & Tehsils ST Population</a></li>
+       
+	   <li><a  href="UploadData/pdf/List_of_Addresses_of_SCAs.pdf" target="_blank">Name of SCAs (State wise) </a></li>
+           <!--<li><a  href="frm_sca_state.aspx">Name of SCAs (State wise) </a></li>-->
+           <li style="display:none;"><a  href="frm_sastd.aspx">State Administrative Setup for Tribal Development </a></li>
+             <li><a  href="frm_nstfdc_avail_assistance.aspx">How to avail NSTFDC’s assistance  </a></li>
+           
+           
+           <li style="display:none;"><a  href="frm_skill_mapping.aspx">Skill mapping</a></li>
+          </ul>
+          </li>
+            <li class="dropdown"> <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">E-Citizen</a>
+          <ul class="dropdown-menu">
+           <li><a href="UploadData/pdf/RTI_Self-Appraisal_2025-26_NSTFDC.pdf" target="_blank">RTI - English</a></li>
+	<li><a href="UploadData/pdf/RTI_Manual_Audit_2025_Hindi.pdf" target="_blank">RTI - Hindi</a></li>
+           <li><a  href="frm_tenders.aspx">Tenders</a></li>
+           <li><a  href="UploadData/pdf/mou_nstfdc_2021-22.pdf" target="_blank">MoU</a></li>
+           <!-- <li class="dropdown-submenu men "><a href="#">Career/Internship</a>
+            <ul class="dropdown-menu">
+                   <li><a  href="frm_careers.aspx">Advertisement</a></li>
+                   <li><a  href="notice.aspx">Notice</a></li>
+                   
+                   <li><a  href="UploadData/pdf/Backlog-Vacancies.pdf" target="_blank">Backlog Vacancies</a></li>                                           
+            </ul>
+            </li> -->
+           <li><a  href="frm_useful_link.aspx">Important Links</a></li>
+           <li><a  href="frm_faq.aspx">FAQ</a></li>
+           <li><a  href="frm_feedback.aspx">Feedback</a></li>
+           <li><a  href="frm_contactus.aspx">Contact Us</a></li>
+          </ul>
+          </li>
+           
+           <li class="dropdown"> <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Downloads </a>
+          <ul class="dropdown-menu">
+           <li><a  href="frm_annual_reports.aspx">Annual Report</a></li>
+           <li><a  href="UploadData/pdf/annual-return-2020-21.pdf" target="_blank">Annual Return 2020-21</a></li>
+          
+            <li><a  href="frm_forms.aspx">Application Forms<br /> (For Various Schemes & Loans)</a></li>
+            
+            <!--<li class="dropdown-submenu men "><a href="#" class="dropdown-toggle" data-toggle="dropdown"></span> Historical Performance</a>
+                <ul class="dropdown-menu pull-left">
+                     <li><a  href="frmDisbrushmentMIS.aspx">Disbursement MIS Report</a></li>
+                     <li><a  href="frmSanctionMISReport.aspx">Sanction MIS Report</a></li>
+			    
+               </ul>
+            </li>-->
+                <li><a  href="UploadData/pdf/E-Patrika_January_June_2026_hindi.pdf" target="-blank">E-Patrika</a></li> 
+		<li>
+         <a  href="UploadData/pdf/vigilance_report.pdf" target="_blank">VIGILANCE</a>
+        </li>
+        <li>
+          <a  href="UploadData/pdf/Model Code of Business Conduct and Ethics.pdf" target="-blank">Model code of Business Conduct</a>
+        </li>
+        <li>
+          <a  href="UploadData/pdf/Cyber_Security_Guidelines_MoTA.pdf" target="-blank">Cyber Security Guidelines</a>
+        </li> 
+<li>
+          <a  href="UploadData/pdf/Grievance_Redressal_Procedure_in_NSTFDC.pdf" target="-blank">Grievance Redressal Procedure</a>
+        </li>                                                                                   
+          </ul>
+          <li><a  href="UploadData/pdf/Minister_Message_2025.jpeg" target="_blank">Minister's Message</a></li>
+          <li class="dropdown"> <a href="#" class="dropdown-toggle products" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Career </a>
+          <ul class="dropdown-menu">
+           <li><a  href="frm_careers.aspx">Advertisement</a></li>
+           <li><a  href="notice.aspx">Notice</a></li>
+          <!-- <li><a  href="frmSelectedCandidateList.aspx">Candidate Short listing List</a></li> 
+          <li><a  href="frmFinalSelectedCandidateList.aspx">Candidate Final Selection List</a></li> -->    
+        </li>
+    </div>
+  </div>
+</nav>
+     
+  
+<div style="background: url(images/nstfdc_backgorund.jpg) repeat-y center top;">
+<div><img src="images/inner_banner.jpg" title="" alt="" class="img-responsive" /></div>
+<div class="body_text container">
+  <div class="row">
+       <div class="innerPanel">
+        
+<div class="col-md-12 heading">
+    <h1><span>Term Loan</span></h1>
+ <span style="margin-left:2%;"></span>   <p>Term loans are available to tribal beneficiaries for setting up their viable Income Generating Ventures in any of the sectors viz. Industrial, Agricultural and Service Sector.  <br /></p>  <p>The loans are given based on requirement of the unit through State Channelizing Agencies. The beneficiaries have to full fill the eligibility criteria of the SCAs and comply with the terms and conditions of the lending by the SCA. <br /></p>  <table class="table table-bordered table-condensed">       <tbody>           <tr>               <td width="140">               <p><strong>Unit Cost</strong></p>               </td>               <td colspan="3" width="472">               <p>Viable Projects/Units costing up to ₹50.00 lakhs</p>               </td>           </tr>           <tr>               <td width="140">               <p><strong>Quantum of Loan Assistance</strong></p>               </td>               <td colspan="3" width="472">               <p>Upto 90% of unit cost is provided by NSTFDC as term loan</p>               </td>           </tr>           <tr>               <td colspan="4" width="612">               <p><strong>Promoters Contribution: </strong></p>               <table class="table table-bordered table-condensed" width="482">                   <tbody>                       <tr>                           <td width="37">                           <p> </p>                           </td>                           <td width="284">                           <p><strong>Cost per Unit</strong></p>                           </td>                           <td width="161">                           <p><strong>Minimum Contribution</strong></p>                           </td>                       </tr>                       <tr>                           <td width="37">                           <p>a)</p>                           </td>                           <td width="284">                           <p>Upto ₹ 1.00 Lakh</p>                           </td>                           <td width="161">                           <p>Not to be insisted upon</p>                           </td>                       </tr>                       <tr>                           <td width="37">                           <p>b)</p>                           </td>                           <td width="284">                           <p>Above ₹ 1.00 lakh and upto ₹ 2.50 lakh</p>                           </td>                           <td width="161">                           <p>2%</p>                           </td>                       </tr>                       <tr>                           <td width="37">                           <p>c)</p>                           </td>                           <td width="284">                           <p>Above ₹ 2.50 lakh and upto ₹ 5.00 lakh</p>                           </td>                           <td width="161">                           <p>3%</p>                           </td>                       </tr>                       <tr>                           <td width="37">                           <p>d)</p>                           </td>                           <td width="284">                           <p>Above ₹ 5.00 lakh</p>                           </td>                           <td width="161">                           <p>5%</p>                           </td>                       </tr>                   </tbody>               </table>               </td>           </tr>           <tr>               <td rowspan="4" width="140">               <p><strong>Interest Rate</strong></p>               </td>               <td width="189">               <p><strong>Loan Amount</strong></p>               </td>               <td width="113">               <p><strong>SCA</strong></p>               </td>               <td width="170">               <p><strong>Beneficiaries</strong></p>               </td>           </tr>           <tr>               <td width="189">               <p>Term Loan up to ₹ 5.00 lakh</p>               </td>               <td width="113">               <p>3%</p>               </td>               <td width="170">               <p>6%</p>               </td>           </tr>           <tr>               <td width="189">               <p>Upto ₹10.00 lakh</p>               </td>               <td width="113">               <p>5%</p>               </td>               <td width="170">               <p>8%</p>               </td>           </tr>           <tr>               <td width="189">               <p>Above ₹10.00 lakh</p>               </td>               <td width="113">               <p>7%</p>               </td>               <td width="170">               <p>10%</p>               </td>           </tr>           <tr>               <td width="140">               <p><strong>Repayment Period</strong></p>               </td>               <td colspan="3" width="472">               <p>The loan is to be repaid in quarterly installments within a maximum period of 5 years including moratorium period. In case of refinance, it will be linked to repayment period fixed by Banks.</p>               </td>           </tr>       </tbody>  </table></div>
+        </div>
+    </div>
+    </div>
+    </div>
+    <div class="clearfix" style="display:block; clear:both;"></div>
+   <div class="clear10"></div>
+    <div class="footer">
+  <div class="container">
+   <div class="text-right"><a class="scrollToTop" href="#" style="display: inline;"></a></div>
+    <div class="row">
+      <div class="col-md-8">
+        <h3>Quick Links</h3>
+        <hr>
+        <div class="row">
+          <div class="col-sm-3">
+            <ul class="list-unstyled fot_link">
+              <li><a href="frm_ministry_tribal_affair.aspx">Ministry of Tribal Affairs</a></li>
+              <li><a href="frm_functions.aspx">Functions</a></li>
+              <li><a href="#">Key Officials</a></li>
+              <li><a href="#">Share Capital</a></li>
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul class="list-unstyled fot_link">
+              <li><a href="#">Our Schemes</a></li>
+              <li><a href="frm_term_loan.aspx">Term Loan</a></li>
+              <li><a href="frm_bridge_loan.aspx">Bridge Loan</a></li>
+              <li><a href="frm_amsy.aspx">AMSY</a></li>
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul class="list-unstyled fot_link">
+              <li><a href="frm_asry.aspx">ASRY</a></li>
+              <li><a href="frm_shg.aspx">SHG</a></li>
+              <li><a href="frm_tenders.aspx">Tenders</a></li>
+              <li><a href="frm_news_letter.aspx">Notices</a></li>
+            </ul>
+          </div>
+          <div class="col-sm-3">
+            <ul class="list-unstyled fot_link">
+              <li><a href="#">Employment</a></li>
+              <li><a href="#">Privacy Policy </a></li>
+              <li><a href="#">Disclaimer</a></li>
+              <li><a href="#">Enquiry</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+      <p><a href="#"><i class="fa fa-facebook-official socil"></i></a> <a href="#"><i class="fa  fa-twitter-square socil"></i></a> <a href="#"><i class="fa fa-rss-square socil"></i></a></p>
+        
+        <p>Copyright © 2020  NSTFDC</p>
+        <p>Designed & Developed by : <a href="#" target="_blank" class="powered">Luminous Infoways</a> </p>
+      </div>
+    </div>
+  </div>
+  <div class="ftr_back">
+<div class="container">
+    <div class="row text-center ">
+      <div class="col-md-12"> 
+           <a href="https://swachhbharat.mygov.in/" target="_blank"><img src="assets/images/swachha-bharat.png" title="" alt="" class="ftr_image"/></a> 
+          <a href="http://tribal.nic.in/" target="_blank"><img src="assets/images/ministry_tribal.png" alt="" class="ftr_image"/></a> 
+          <a href="http://india.gov.in" target="_blank"><img src="assets/images/india_gov.png" title="" alt="" class="ftr_image"/></a> 
+          <a href="http://pmindia.gov.in" target="_blank"><img src="assets/images/pm_india.png" title="" alt="" class="ftr_image"/></a> 
+          <a href="http://www.makeinindia.com/" target="_blank"><img src="assets/images/makein_india.png" title="" alt="" class="ftr_image"/></a> 
+          <a href="http://www.pmkvyofficial.org/" target="_blank"><img src="assets/images/pmkvy.png" title="" alt=""/></a>
+    	</div>
+  	</div>
+  </div>
+ </div>
+</div>
+    </form>
+</body>
+</html>

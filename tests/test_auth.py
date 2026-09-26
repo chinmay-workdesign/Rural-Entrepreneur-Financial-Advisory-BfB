@@ -150,3 +150,29 @@ def test_login_page_renders():
     assert "State Channelizing Agency" in response.text
     assert "Sign In" in response.text
     assert "Register Officer" in response.text
+
+
+def test_stale_cookie_for_deleted_user_does_not_loop():
+    """A well-signed cookie for an account that no longer exists must lead to the login form, not a redirect loop."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.auth.security import create_access_token
+
+    stale = create_access_token({"sub": "00000000-0000-0000-0000-00000000dead", "email": "gone@sca.gov.in", "role": "ADMIN"})
+    c = TestClient(app, follow_redirects=False)
+    c.cookies.set("sca_auth_token", stale)
+    login = c.get("/login")
+    assert login.status_code == 200
+    assert "sca_auth_token" in login.headers.get("set-cookie", "")
+    c.cookies.set("sca_auth_token", stale)
+    admin = c.get("/admin")
+    assert admin.status_code == 302 and admin.headers["location"] == "/login"
+
+
+def test_applications_and_decisions_require_officer_login():
+    """Applicants' personal data and loan decisions are for logged-in officers only."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    anon = TestClient(app)
+    assert anon.get("/internal/proposals").status_code == 401
+    assert anon.post("/internal/sanction/some-id", json={"field_officer_id": "x", "recommendation": "APPROVE"}).status_code == 401
