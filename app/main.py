@@ -104,26 +104,44 @@ def health_check():
         "environment": settings.ENVIRONMENT
     }
 
-@app.get("/login", response_class=HTMLResponse)
-def get_login_page(request: Request):
-    """Serves the secure Officer Authentication & Registration page."""
+def _session_user(request: Request, db: Session) -> Optional[models.User]:
+    """
+    The signed-in officer, or None. The account must still exist and be active: a cookie that is merely
+    well-signed (e.g. from before the database was reset) must not count, or /login and /admin redirect
+    to each other forever.
+    """
     token = request.cookies.get(COOKIE_NAME)
-    if token and decode_access_token(token):
+    payload = decode_access_token(token) if token else None
+    if not payload or "sub" not in payload:
+        return None
+    user = crud.get_user_by_id(db, payload["sub"])
+    return user if user and user.is_active else None
+
+
+def _without_stale_cookie(response, request: Request):
+    if request.cookies.get(COOKIE_NAME):
+        response.delete_cookie(key=COOKIE_NAME, path="/", httponly=True, samesite="lax")
+    return response
+
+
+@app.get("/login", response_class=HTMLResponse)
+def get_login_page(request: Request, db: Session = Depends(get_db)):
+    """Serves the secure Officer Authentication & Registration page."""
+    if _session_user(request, db):
         return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
 
     login_template = os.path.join(os.path.dirname(__file__), "templates", "login.html")
     if os.path.exists(login_template):
         with open(login_template, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return _without_stale_cookie(HTMLResponse(content=f.read()), request)
     return HTMLResponse(content="<h2>SCA Portal login template loading...</h2>")
 
 @app.get("/", response_class=HTMLResponse)
 @app.get("/admin", response_class=HTMLResponse)
-def get_admin_dashboard(request: Request):
+def get_admin_dashboard(request: Request, db: Session = Depends(get_db)):
     """Serves the central SCA Field Officer & Admin Loan Appraisal Portal (Session Guarded)."""
-    token = request.cookies.get(COOKIE_NAME)
-    if not token or not decode_access_token(token):
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    if not _session_user(request, db):
+        return _without_stale_cookie(RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND), request)
 
     template_path = os.path.join(os.path.dirname(__file__), "templates", "admin.html")
     if os.path.exists(template_path):

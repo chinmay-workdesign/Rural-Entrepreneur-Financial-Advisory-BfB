@@ -144,3 +144,108 @@ def test_regional_language_answers_are_understood():
     assert intake.extract_answers("अनुसूचित जनजाति", "social_category")["social_category"] == "st"
     assert intake.extract_answers("గ్రామం", "area_type")["area_type"] == "rural"
     assert intake.extract_answers("होय", "education_8th_pass")["education_8th_pass"] is True
+
+
+# 8. The selected language never changes by itself (typed or spoken answers)
+def _lang(chat_id: str) -> str:
+    db = SessionLocal()
+    try:
+        return crud.get_or_create_telegram_beneficiary(db, chat_id).preferred_language
+    finally:
+        db.close()
+
+
+def test_selected_language_is_kept_for_latin_script_answers():
+    chat_id = _chat()
+    _say(chat_id, "/start")
+    _say(chat_id, "5. मराठी (Marathi)")
+    for text in ("maza vay 28 ahe", "Bengaluru", "Hi", "OBC", "2 lakh", "My name is Pranav Chougule"):
+        messages = _say(chat_id, text)
+        assert _lang(chat_id) == "marathi", text
+        assert all("Sorry, I didn't catch that" not in m for m in messages)
+
+
+def test_voice_transcript_does_not_switch_language():
+    from app.dialogue.conversation_state import process_telegram_voice_query
+    chat_id = _chat()
+    _say(chat_id, "/start")
+    _say(chat_id, "3. ಕನ್ನಡ (Kannada)")
+    with patch("app.dialogue.conversation_state.download_telegram_file", return_value=b"OggS-audio"), \
+         patch("app.dialogue.conversation_state.transcribe_audio", return_value="maza vay 28 ahe"), \
+         patch("app.dialogue.conversation_state.send_channel_text"):
+        process_telegram_voice_query(chat_id, "file-1")
+    assert _lang(chat_id) == "kannada"
+
+
+def test_explicit_language_request_still_switches():
+    chat_id = _chat()
+    _start_english(chat_id)
+    _say(chat_id, "Hindi please")
+    assert _lang(chat_id) == "hindi"
+
+
+# 9. Nothing from an earlier conversation is reused
+def test_new_conversation_asks_every_question_again():
+    chat_id = _chat()
+    _start_english(chat_id)
+    _say(chat_id, "dairy in Mysuru, project cost 2 lakh")
+    complete_intake(lambda t: _say(chat_id, t), lambda db: crud.get_or_create_telegram_beneficiary(db, chat_id),
+                    answers={"gender": "man", "age": "28", "social_category": "general"})
+
+    for restart in ("/start", "Hi", "RESET"):
+        _say(chat_id, restart)
+        _say(chat_id, "1. English")
+        state, ctx = _load(chat_id)
+        assert ctx.get("profile") in (None, {}), restart
+        assert ctx.get("trade") is None and ctx.get("project_cost") is None
+        _say(chat_id, "poultry in Hassan, project cost 3 lakh")
+        asked = []
+        for _ in range(12):
+            state, ctx = _load(chat_id)
+            if state != "COLLECTING":
+                break
+            asked.append(ctx["pending_field"])
+            _say(chat_id, {"full_name": "Ravi", "gender": "woman", "age": "40", "social_category": "SC",
+                           "area_type": "village", "annual_family_income": "1 lakh", "available_capital": "0"}[ctx["pending_field"]])
+        assert asked == ["full_name", "age", "gender", "social_category", "area_type", "annual_family_income",
+                         "available_capital"], (restart, asked)
+
+
+# 10. Related questions are asked together; partial answers keep what was said and ask only for the rest
+def test_grouped_questions_and_partial_answers():
+    chat_id = _chat()
+    _start_english(chat_id)
+    _say(chat_id, "dairy in Belagavi, project cost 2 lakh")
+    state, ctx = _load(chat_id)
+    assert ctx["pending_fields"] == ["full_name", "age", "gender", "social_category"]
+
+    messages = _say(chat_id, "Lakshmi, 34")
+    state, ctx = _load(chat_id)
+    assert (ctx["profile"]["full_name"], ctx["profile"]["age"]) == ("Lakshmi", 34)
+    assert ctx["pending_fields"] == ["gender", "social_category"]
+    assert any("Please also tell me" in m for m in messages)
+
+    _say(chat_id, "woman, SC")
+    state, ctx = _load(chat_id)
+    assert ctx["pending_fields"] == ["area_type", "annual_family_income", "available_capital"]
+
+    _say(chat_id, "village, income 1.5 lakh, own money 20 thousand")
+    state, ctx = _load(chat_id)
+    assert state == "CONFIRM_PROFILE"
+    assert (ctx["profile"]["area_type"], ctx["profile"]["annual_family_income"], ctx["available_capital"]) == ("rural", 150000.0, 20000.0)
+
+
+def test_ambiguous_grouped_amounts_are_asked_again_not_guessed():
+    answers = intake.extract_answers("village, 1.5 lakh", ["area_type", "annual_family_income", "available_capital"])
+    assert answers["area_type"] == "rural"
+    assert answers["annual_family_income"] is None and answers["available_capital"] is None
+
+
+def test_extra_group_only_when_rules_need_it():
+    ctx = {"trade": "Flour Mill", "project_cost": 600000.0, "district": "Dharwad",
+           "profile": {"full_name": "R", "age": 45, "gender": "male", "social_category": "general",
+                       "area_type": "urban", "annual_family_income": 300000.0}, "available_capital": 60000.0}
+    group, needed, missing = intake.next_group(ctx)
+    assert group == "extra" and missing == ["special_status"]  # manufacturing: 8th pass only above Rs 10 lakh
+    ctx["profile"]["gender"] = "female"
+    assert intake.next_group(ctx) is None

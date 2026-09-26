@@ -116,7 +116,7 @@ def parse_amount(text: str, allow_zero: bool = False) -> Optional[float]:
 
 def parse_age(text: str) -> Optional[int]:
     t = to_ascii_digits(text)
-    for m in re.finditer(r"(?<![\d.,])(\d{1,3})(?![\d.,])", t):
+    for m in re.finditer(r"(?<!\d)(?<!\d[.,])(\d{1,3})(?!\d)(?![.,]\d)", t):
         value = int(m.group(1))
         if 10 <= value <= 100:
             return value

@@ -1,3 +1,13 @@
+import os
+import tempfile
+
+# Tests get their own database file, set before any app module creates the engine, so test
+# applicants never appear in the real application database or the SCA officer portal.
+_TEST_DB = os.path.join(tempfile.gettempdir(), "rural_advisor_tests.db")
+if os.path.exists(_TEST_DB):
+    os.remove(_TEST_DB)
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
+
 import pytest
 from unittest.mock import patch
 from app.db.session import init_db

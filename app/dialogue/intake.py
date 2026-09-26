@@ -1,6 +1,7 @@
 """
-Applicant intake: collects every detail the advice and the DPR depend on, one question at a time,
-then asks the applicant to confirm them. Nothing is assumed or defaulted.
+Applicant intake: collects every detail the advice and the DPR depend on in a few grouped questions
+(business; about you; location and money; conditional extras), then asks the applicant to confirm them.
+A partial answer keeps what was stated and asks only for the rest. Nothing is assumed or defaulted.
 
 Context layout: enterprise fields (trade, district, state, project_cost, available_capital) sit at the
 top level of the conversation context; applicant fields sit under context["profile"].
@@ -11,7 +12,8 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.dialogue import intake_parsing as P
-from app.dialogue.intake_text import QUESTIONS, LABELS, VALUE_LABELS, FIELD_KEYWORDS, MESSAGES, text_for
+from app.dialogue.intake_text import (QUESTIONS, LABELS, VALUE_LABELS, FIELD_KEYWORDS, MESSAGES, GROUP_QUESTIONS,
+                                      text_for)
 from app.finance.calculator import MIN_PROJECT_COST, TLS_MAX_COST
 from app.finance.pmegp import education_question_needed
 from app.finance.formatting import format_inr
@@ -20,7 +22,7 @@ logger = logging.getLogger("intake")
 
 ENTERPRISE_FIELDS = ("trade", "district", "project_cost", "available_capital")
 BASE_ORDER = [
-    "trade", "district", "project_cost", "full_name", "gender", "age", "social_category",
+    "trade", "district", "project_cost", "full_name", "age", "gender", "social_category",
     "area_type", "annual_family_income", "available_capital",
 ]
 AMOUNT_FIELDS = ("project_cost", "annual_family_income", "available_capital")
@@ -69,6 +71,38 @@ def question(field: str, lang: str) -> str:
     return text_for(QUESTIONS[field], lang)
 
 
+# Questions are asked in groups of related details
+GROUPS = [
+    ("business", ["trade", "district", "project_cost"]),
+    ("about_you", ["full_name", "age", "gender", "social_category"]),
+    ("location_money", ["area_type", "annual_family_income", "available_capital"]),
+    ("extra", ["special_status", "education_8th_pass"]),
+]
+
+
+def next_group(context: Dict[str, Any]) -> Optional[Tuple[str, List[str], List[str]]]:
+    """(group id, required fields of the group, missing ones) for the first group with anything missing."""
+    required = set(required_fields(context))
+    for group, fields in GROUPS:
+        needed = [f for f in fields if f in required]
+        missing = [f for f in needed if get_value(context, f) is None]
+        if missing:
+            return group, needed, missing
+    return None
+
+
+def next_prompt(context: Dict[str, Any], lang: str) -> Optional[Tuple[str, List[str]]]:
+    """The message asking for the next missing details, and the fields it asks for."""
+    nxt = next_group(context)
+    if not nxt:
+        return None
+    group, needed, missing = nxt
+    if group in GROUP_QUESTIONS and missing == needed:
+        return text_for(GROUP_QUESTIONS[group], lang), missing
+    header = text_for(MESSAGES["almost_done" if group == "extra" and missing == needed else "also_tell"], lang)
+    return header + "\n\n" + "\n\n".join(question(f, lang) for f in missing), missing
+
+
 # ---------------- reading answers ----------------
 
 _EXTRACTION_PROMPT = """You read applicant details for a rural business loan advisory in Karnataka, India.
@@ -98,17 +132,21 @@ Rules:
 """
 
 
-def _gemini_extract(text: str, pending: Optional[str]) -> Optional[Dict[str, Any]]:
+def _gemini_extract(text: str, pending: List[str]) -> Optional[Dict[str, Any]]:
     from app.ai.gemini_client import is_gemini_configured
     from app.ai.llm_client import call_llm_chat
 
     if not is_gemini_configured():
         return None
-    hint = (
-        f"The user is answering this question: \"{question(pending, 'english')}\". "
-        f"A short answer (a number, a word, yes/no) refers to that question."
-        if pending else "The user may give several details at once."
-    )
+    if len(pending) == 1:
+        hint = (f"The user is answering this question: \"{question(pending[0], 'english')}\". "
+                f"A short answer (a number, a word, yes/no) refers to that question.")
+    elif pending:
+        asked = " | ".join(question(f, "english") for f in pending)
+        hint = (f"The user is answering these questions, possibly all at once and in any order: {asked}. "
+                f"Map each stated value to its question; leave unanswered ones null.")
+    else:
+        hint = "The user may give several details at once."
     raw = call_llm_chat(
         messages=[
             {"role": "system", "content": _EXTRACTION_PROMPT.format(hint=hint)},
@@ -163,10 +201,61 @@ def match_field_name(text: str) -> Optional[str]:
     return None
 
 
-def _rule_based_extract(text: str, pending: Optional[str]) -> Dict[str, Any]:
+_SEGMENT_SPLIT = re.compile(r"[,;\n।]+|\s+(?:and|और|ಮತ್ತು|మరియు|आणि)\s+")
+
+
+def _segments(text: str) -> List[str]:
+    return [seg.strip() for seg in _SEGMENT_SPLIT.split(text or "") if seg and seg.strip()]
+
+
+def _read_several(text: str, pending: List[str]) -> Dict[str, Any]:
+    """
+    Reads answers to several questions from one message. Only unambiguous values are taken: a value that
+    could belong to more than one question (two amounts, two yes/no answers) needs its label, and a name
+    is only taken from its own comma-separated part. Anything unclear is asked again, never guessed.
+    """
+    data: Dict[str, Any] = {}
+    segments = _segments(text)
+    for field, reader in (("gender", P.parse_gender), ("social_category", P.parse_category), ("area_type", P.parse_area)):
+        if field in pending:
+            data[field] = reader(text)
+    if "age" in pending:
+        data["age"] = P.parse_age(text)
+
+    for group_fields in ([f for f in pending if f in AMOUNT_FIELDS], [f for f in pending if f in ("special_status", "education_8th_pass")]):
+        if len(group_fields) == 1:
+            data[group_fields[0]] = _parse_field(group_fields[0], text)
+        elif len(group_fields) > 1:
+            unlabeled = []
+            for seg in segments:
+                named = match_field_name(seg)
+                if named in group_fields and data.get(named) is None:
+                    data[named] = _parse_field(named, seg)
+                elif named is None and _parse_field(group_fields[0], seg) is not None:
+                    unlabeled.append(seg)
+            # Unlabelled values given in the order the questions were numbered, one per question
+            still = [f for f in group_fields if data.get(f) is None]
+            if still and len(unlabeled) == len(still):
+                for field, seg in zip(still, unlabeled):
+                    data[field] = _parse_field(field, seg)
+
+    if "full_name" in pending and len(segments) > 1:
+        for seg in segments:
+            if (not re.search(r"\d", P.to_ascii_digits(seg)) and not P.parse_gender(seg) and not P.parse_category(seg)
+                    and not P.parse_area(seg)):
+                data["full_name"] = P.parse_name(seg)
+                break
+
+    if not any(v is not None for v in data.values()) and pending and len(segments) <= 1:
+        # A single short reply answers the first question listed
+        data[pending[0]] = _parse_field(pending[0], text)
+    return data
+
+
+def _rule_based_extract(text: str, pending: List[str]) -> Dict[str, Any]:
     if pending:
-        data: Dict[str, Any] = {pending: _parse_field(pending, text)}
-        if pending != "full_name":
+        data: Dict[str, Any] = _read_several(text, pending) if len(pending) > 1 else {pending[0]: _parse_field(pending[0], text)}
+        if "full_name" not in pending:
             # Places and businesses named alongside the answer are explicit, so read them too
             data.setdefault("district", P.normalize_district(text) or P.outside_karnataka_place(text))
             from app.ai.extraction import fallback_regex_extractor
@@ -227,18 +316,24 @@ def _clean(data: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def extract_answers(text: str, pending: Optional[str]) -> Dict[str, Any]:
-    """Reads everything the message states. Gemini first; rule-based readers when it is unavailable."""
-    gemini = _gemini_extract(text, pending)
+def extract_answers(text: str, pending: Any) -> Dict[str, Any]:
+    """
+    Reads everything the message states. `pending` is the field or fields just asked for.
+    Gemini first; rule-based readers when it is unavailable or leaves an asked field empty.
+    """
+    pending_list: List[str] = [pending] if isinstance(pending, str) else list(pending or [])
+    gemini = _gemini_extract(text, pending_list)
     if gemini is None:
-        return _clean(_rule_based_extract(text, pending))
+        return _clean(_rule_based_extract(text, pending_list))
 
     data = _clean(gemini)
-    # A short answer to a known question that Gemini left empty: read it with the rule-based reader
-    if pending and data.get(pending) is None:
-        value = _clean({pending: _parse_field(pending, text)}).get(pending)
-        if value is not None and not (pending in AMOUNT_FIELDS and value in [data.get(f) for f in AMOUNT_FIELDS]):
-            data[pending] = value
+    if pending_list and any(data.get(f) is None for f in pending_list):
+        fallback = _clean(_rule_based_extract(text, pending_list))
+        taken_amounts = [data.get(f) for f in AMOUNT_FIELDS if data.get(f) is not None]
+        for field in pending_list:
+            value = fallback.get(field)
+            if data.get(field) is None and value is not None and not (field in AMOUNT_FIELDS and value in taken_amounts):
+                data[field] = value
     if data.get("confirmation") is None:
         data["confirmation"] = P.parse_yes_no(text)
     return data

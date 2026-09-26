@@ -158,32 +158,43 @@ LANGUAGE_CONFIRMATIONS = {
     "marathi": "निवडलेली भाषा: *मराठी* ✅\n\n" + GREETING_MSG_MR,
 }
 
+_LANGUAGE_NAMES = {
+    "english": "english", "hindi": "hindi", "हिंदी": "hindi", "हिन्दी": "hindi",
+    "kannada": "kannada", "ಕನ್ನಡ": "kannada", "telugu": "telugu", "telgu": "telugu", "తెలుగు": "telugu",
+    "marathi": "marathi", "मराठी": "marathi",
+}
+_LANGUAGE_REQUEST = re.compile(
+    r"^(?:(?:in|change to|switch to|speak|reply in)\s+)?(?P<name>\S+)(?:\s+(?:language|please|bhasha|भाषा|ಭಾಷೆ|భాష))?$"
+)
+
+
 def _resolve_language_choice(text: str, allow_numeric: bool = True) -> Optional[str]:
     """
-    Language picked from the menu. Bare menu numbers count only while the menu is shown, so answers
-    such as '2 lakh' or '1.5 lakh' later in the conversation are never read as a language choice.
+    Language picked by the user. While the menu is shown (allow_numeric) menu numbers, codes and names count.
+    Afterwards only a menu button or a message that is just a language name ("Hindi", "in Kannada",
+    "ಕನ್ನಡ") changes it, so answers such as "2 lakh", "Hi" or "Bengaluru" never switch the language.
     """
-    t = text.strip().lower()
-    if not allow_numeric and re.match(r"^[0-9]", t) and not re.match(r"^[1-5]\.\s+[^\d\s]", t):
+    t = text.strip().lower().rstrip(".!")
+    # Menu buttons, e.g. "2. हिंदी (Hindi)", work at any time
+    button = re.match(r"^([1-5])\.\s+\S", t)
+    if button and "(" in t or t == "1. english":
+        return {"1": "english", "2": "hindi", "3": "kannada", "4": "telugu", "5": "marathi"}[button.group(1)]
+    m = _LANGUAGE_REQUEST.match(t)
+    if m and m.group("name") in _LANGUAGE_NAMES:
+        return _LANGUAGE_NAMES[m.group("name")]
+    if not allow_numeric:
         return None
     if t in LANGUAGE_CHOICES:
         return LANGUAGE_CHOICES[t]
     for num, lang in [("1", "english"), ("2", "hindi"), ("3", "kannada"), ("4", "telugu"), ("5", "marathi")]:
-        if not allow_numeric:
-            break
         if t == num or t.startswith(f"{num} ") or t.startswith(f"{num}.") or t.startswith(f"{num}-"):
             return lang
     if len(t.split()) <= 4:
-        if any(k in t for k in ["telugu", "telgu", "తెలుగు"]):
-            return "telugu"
-        if any(k in t for k in ["marathi", "मराठी"]):
-            return "marathi"
-        if any(k in t for k in ["kannada", "ಕನ್ನಡ"]):
-            return "kannada"
-        if any(k in t for k in ["hindi", "हिंदी", "हिन्दी"]):
-            return "hindi"
-        if any(k in t for k in ["english", "eng"]):
-            return "english"
+        for lang, keys in (("telugu", ["telugu", "telgu", "తెలుగు"]), ("marathi", ["marathi", "मराठी"]),
+                           ("kannada", ["kannada", "ಕನ್ನಡ"]), ("hindi", ["hindi", "हिंदी", "हिन्दी"]),
+                           ("english", ["english"])):
+            if any(k in t for k in keys):
+                return lang
     return None
 
 MARATHI_DISTINCT_WORDS = {
@@ -330,14 +341,10 @@ def process_telegram_voice_query(chat_id: str, file_id: str, user_name: Optional
         return
 
     # Synchronize language immediately from the spoken voice note transcript
-    detected = detect_message_language(transcription)
+    # The selected language is kept: a transcript (possibly romanised) never switches it
     db = SessionLocal()
     try:
         beneficiary = crud.get_or_create_telegram_beneficiary(db, chat_id, full_name=user_name)
-        if detected:
-            beneficiary.preferred_language = detected
-            db.commit()
-            logger.info(f"Updated preferred_language to '{detected}' based on voice transcript.")
         _handle_user_turn(db, beneficiary, transcription, from_voice=True)
     finally:
         db.close()
@@ -418,8 +425,8 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
     ]
     if text_clean.upper() in start_or_lang_cmds:
         beneficiary.conversation_state = "LANGUAGE_SELECTION"
-        keep = {} if text_clean.upper() in ("RESET", "CLEAR", "NEW") else {"profile": context.get("profile") or {}}
-        beneficiary.conversation_context = keep
+        # A new conversation starts empty: nothing from an earlier conversation is reused
+        beneficiary.conversation_context = {}
         db.commit()
         send_channel_text(beneficiary, LANGUAGE_PROMPT_MSG, reply_markup=LANGUAGE_KEYBOARD)
         return
@@ -436,11 +443,9 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
             _send_voice_audio_reply(beneficiary, confirmation, chosen_lang)
         return
 
-    # 3. Synchronize language from message if clearly detected. Short Latin-script answers (a name, a
-    # district, "OBC") during intake do not switch a regional-language user to English.
-    detected_lang = detect_message_language(text_clean)
-    if detected_lang == "english" and state in ("COLLECTING", "CONFIRM_PROFILE") and len(text_clean.split()) < 5:
-        detected_lang = None
+    # 3. Once the user has chosen a language it stays fixed; only the menu or naming a language changes it
+    # (handled above). Detection from the message is used only while no language has been chosen yet.
+    detected_lang = detect_message_language(text_clean) if state == "LANGUAGE_SELECTION" else None
     if detected_lang:
         beneficiary.preferred_language = detected_lang
         db.commit()
@@ -499,7 +504,7 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
     # 5. Greetings when already in an active dialogue state
     if text_clean.upper() in ["HI", "HELLO", "ನಮಸ್ಕಾರ", "नमस्ते", "నమస్కారం", "నమస్తే", "नमस्कार"]:
         beneficiary.conversation_state = "COLLECTING"
-        beneficiary.conversation_context = {"profile": context.get("profile") or {}}
+        beneficiary.conversation_context = {}
         db.commit()
         if lang == "kannada":
             greeting = GREETING_MSG_KN
@@ -632,7 +637,8 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
 
         if is_new_venture or has_new_cost:
             if is_new_venture:
-                context = {"profile": context.get("profile") or {}}
+                # A different business starts a fresh application: every detail is asked again
+                context = {}
             beneficiary.conversation_state = "COLLECTING"
             _handle_intake_turn(db, beneficiary, text_clean, context, from_voice=from_voice)
             return
@@ -829,19 +835,20 @@ def _looks_like_question(text: str) -> bool:
 
 
 def _prompt_intake(db, beneficiary, context: Dict[str, Any], lang: str, from_voice: bool, prefix: str = ""):
-    """Ask the next missing detail, or show the summary for confirmation once everything is collected."""
-    nxt = intake.next_missing(context)
+    """Ask the next group of missing details, or show the summary for confirmation once everything is collected."""
+    nxt = intake.next_prompt(context, lang)
     context["awaiting_field_choice"] = False
     if nxt:
-        context["pending_field"] = nxt
+        msg, fields = nxt
+        context["pending_fields"] = fields
+        context["pending_field"] = fields[0]
         beneficiary.conversation_state = "COLLECTING"
-        msg = intake.question(nxt, lang)
-        speak_all = False
     else:
+        context["pending_fields"] = []
         context["pending_field"] = None
         beneficiary.conversation_state = "CONFIRM_PROFILE"
         msg = intake.summary(context, lang)
-        speak_all = True  # voice users must hear every detail they are confirming
+    speak_all = True  # voice users must hear every question and every detail they confirm
     _save_context(db, beneficiary, context)
     _send(beneficiary, f"{prefix}\n\n{msg}" if prefix else msg, lang, from_voice, speak_all=speak_all)
 
@@ -853,7 +860,7 @@ def _handle_intake_turn(db, beneficiary, text: str, context: Dict[str, Any], fro
     answered nothing but looks like a general question, so the caller can route it elsewhere.
     """
     lang = beneficiary.preferred_language or "english"
-    pending = context.get("pending_field")
+    pending = context.get("pending_fields") or ([context["pending_field"]] if context.get("pending_field") else [])
     answers = intake.extract_answers(text, pending)
     updated, issue = intake.apply_answers(context, answers)
     logger.info(f"Intake answers: updated={updated} issue={issue}")
@@ -908,6 +915,7 @@ def _handle_profile_confirmation(db, beneficiary, text: str, context: Dict[str, 
     if answers.get("confirmation") == "yes" and intake.next_missing(context) is None:
         context["profile_confirmed"] = True
         context["pending_field"] = None
+        context["pending_fields"] = []
         context["awaiting_field_choice"] = False
         _run_advisory(db, beneficiary, context, from_voice=from_voice)
         return

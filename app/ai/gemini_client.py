@@ -126,6 +126,8 @@ def transcribe_audio_gemini(
         f"You are an expert speech recognition system for rural Indian entrepreneurs. "
         f"Transcribe this audio recording accurately into text in its original spoken language "
         f"(such as {source_language}, Hindi, Marathi, Telugu, Tamil, or English). "
+        f"The user has chosen {source_language}: write {source_language} speech in its own script "
+        f"(Kannada script for Kannada, Devanagari for Hindi and Marathi, Telugu script for Telugu), never romanised. "
         f"Write every number, amount and age with digits, keeping the spoken unit word "
         f"(e.g. 'two lakh' -> '2 lakh', 'ಎರಡು ಲಕ್ಷ' -> '2 ಲಕ್ಷ', 'पैंतीस साल' -> '35 साल'). "
         f"Return ONLY the plain transcribed text without markdown, quotes, or explanations."
