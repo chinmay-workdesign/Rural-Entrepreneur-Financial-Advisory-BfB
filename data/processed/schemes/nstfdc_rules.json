@@ -1,0 +1,131 @@
+{
+  "scheme_name": "NSTFDC loans for Scheduled Tribes",
+  "issuing_authority": "National Scheduled Tribes Finance and Development Corporation (NSTFDC)",
+  "source_id": "NSTFDC_TERM_LOAN_PAGE",
+  "channel": "State Channelising Agencies, public sector banks and regional rural banks",
+  "rules": [
+    {
+      "rule_id": "NSTFDC_ELIGIBLE_CATEGORY",
+      "parameter": "ELIGIBLE_SOCIAL_CATEGORY",
+      "value": "ST",
+      "conditions": "Applicants must belong to a Scheduled Tribe notified in their State/UT of residence",
+      "source_id": "NSTFDC_ELIGIBILITY_PAGE",
+      "section": "Eligibility",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "NSTFDC_MAX_FAMILY_INCOME",
+      "parameter": "MAX_ANNUAL_FAMILY_INCOME",
+      "value": 300000.0,
+      "conditions": "Rs 3,00,000 p.a. rural and urban per Lending Norms page; Eligibility Criteria page says Rs 98,000 rural / Rs 1,20,000 urban",
+      "source_id": "NSTFDC_ELIGIBILITY_PAGE",
+      "section": "Eligibility",
+      "verification_status": "CONFLICTING",
+      "alternative_values": {
+        "rural": 98000.0,
+        "urban": 120000.0,
+        "source_id": "NSTFDC_INDIVIDUALS_PAGE"
+      }
+    },
+    {
+      "rule_id": "NSTFDC_TL_MAX_UNIT_COST",
+      "parameter": "MAX_PROJECT_COST",
+      "value": 5000000.0,
+      "conditions": "Viable projects/units costing up to Rs 50 lakh",
+      "source_id": "NSTFDC_TERM_LOAN_PAGE",
+      "section": "Term Loan",
+      "verification_status": "VERIFIED",
+      "unit": "INR"
+    },
+    {
+      "rule_id": "NSTFDC_TL_LOAN_PCT",
+      "parameter": "LOAN_PCT_OF_PROJECT_COST",
+      "value": 90.0,
+      "conditions": "Up to 90% of unit cost",
+      "source_id": "NSTFDC_TERM_LOAN_PAGE",
+      "section": "Term Loan",
+      "verification_status": "VERIFIED",
+      "unit": "PERCENT"
+    },
+    {
+      "rule_id": "NSTFDC_TL_PROMOTER_CONTRIBUTION",
+      "parameter": "PROMOTER_CONTRIBUTION_SLABS",
+      "value": [
+        {
+          "max_cost": 100000.0,
+          "pct": 0.0
+        },
+        {
+          "max_cost": 250000.0,
+          "pct": 2.0
+        },
+        {
+          "max_cost": 500000.0,
+          "pct": 3.0
+        },
+        {
+          "max_cost": null,
+          "pct": 5.0
+        }
+      ],
+      "conditions": "Minimum promoter contribution by cost per unit (not insisted upon up to Rs 1 lakh)",
+      "source_id": "NSTFDC_TERM_LOAN_PAGE",
+      "section": "Term Loan",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "NSTFDC_TL_INTEREST_SLABS",
+      "parameter": "BENEFICIARY_INTEREST_SLABS",
+      "value": [
+        {
+          "max_loan": 500000.0,
+          "pct": 6.0
+        },
+        {
+          "max_loan": 1000000.0,
+          "pct": 8.0
+        },
+        {
+          "max_loan": null,
+          "pct": 10.0
+        }
+      ],
+      "conditions": "Beneficiary interest by loan amount",
+      "source_id": "NSTFDC_TERM_LOAN_PAGE",
+      "section": "Term Loan",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "NSTFDC_TL_REPAYMENT",
+      "parameter": "REPAYMENT_MONTHS",
+      "value": 60,
+      "conditions": "Quarterly instalments within 5 years including moratorium (moratorium length not stated)",
+      "source_id": "NSTFDC_TERM_LOAN_PAGE",
+      "section": "Term Loan",
+      "verification_status": "VERIFIED",
+      "unit": "MONTHS",
+      "instalment": "QUARTERLY"
+    },
+    {
+      "rule_id": "NSTFDC_AMSY_MAX_LOAN",
+      "parameter": "MAX_LOAN",
+      "value": 200000.0,
+      "conditions": "AMSY, Scheduled Tribe women only: loan up to Rs 2 lakh per unit",
+      "source_id": "NSTFDC_AMSY_PAGE",
+      "section": "AMSY",
+      "verification_status": "VERIFIED",
+      "unit": "INR"
+    },
+    {
+      "rule_id": "NSTFDC_AMSY_INTEREST",
+      "parameter": "BENEFICIARY_INTEREST_PCT",
+      "value": 4.0,
+      "conditions": "Loan up to Rs 1 lakh; no rate is given above Rs 1 lakh",
+      "source_id": "NSTFDC_AMSY_PAGE",
+      "section": "AMSY",
+      "verification_status": "VERIFIED",
+      "unit": "PERCENT_PA",
+      "applies_to_max_loan": 100000.0
+    }
+  ]
+}

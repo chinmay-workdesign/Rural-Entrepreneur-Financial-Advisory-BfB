@@ -48,7 +48,7 @@ def validate_policy_data():
             continue
 
         raw_pdf = valid_source_ids[sid]["local_path"]
-        pdf_reader = PdfReader(raw_pdf) if os.path.exists(raw_pdf) else None
+        pdf_reader = PdfReader(raw_pdf) if os.path.exists(raw_pdf) and raw_pdf.lower().endswith(".pdf") else None
 
         for r in rules:
             rid = r.get("rule_id")

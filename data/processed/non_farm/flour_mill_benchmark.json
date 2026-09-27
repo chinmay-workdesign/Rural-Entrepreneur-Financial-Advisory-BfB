@@ -1,0 +1,120 @@
+{
+  "dataset_version": "1.0.0",
+  "source_id": "SAMADHAN_FLOUR_MILL_PROJECT_PROFILE",
+  "source_document": "Flour_Mill_(_Samadhan_Projects_).pdf",
+  "source_type": "MODEL_PROJECT_PROFILE",
+  "issuing_authority": "Project SAMADHAN / Multi Disciplinary Training Centre (MDTC), Gandhi Darshan Rajghat, New Delhi & Lucknow",
+  "publication_year": 2020,
+  "publication_date": "2020-01-04",
+  "source_url": "https://www.udyami.org.in",
+  "geographic_scope": "National (All India Model)",
+  "state": "National",
+  "district": "DATA_NOT_AVAILABLE",
+  "generated_at": "2026-09-25T16:55:00+05:30",
+  "benchmarks": [
+    {
+      "benchmark_id": "SAMADHAN_FLOUR_MILL_COMMERCIAL_2400MT_2020",
+      "activity": "Mini Flour Mill",
+      "sub_activity": "Commercial Flour Mill (Atta, Maida, Sooji, Chokar)",
+      "benchmark_source_type": "MODEL_PROJECT_PROFILE",
+      "state": "National",
+      "district": "DATA_NOT_AVAILABLE",
+      "publication_year": 2020,
+      "cost_nature": "HISTORICAL_BENCHMARK_2020",
+      "project_cost": 3293000.0,
+      "fixed_capital": 2737000.0,
+      "working_capital_margin": 556000.0,
+      "means_of_finance": {
+        "own_contribution": 1419000.0,
+        "own_contribution_percentage": 43.09,
+        "term_loan": 1874000.0,
+        "term_loan_percentage": 56.91,
+        "total": 3293000.0
+      },
+      "cost_breakdown": [
+        {
+          "component": "Land & Building",
+          "category": "CIVIL_WORKS",
+          "amount": 0.0,
+          "notes": "Owned/Rented premises assumed; rent captured under operating expenses"
+        },
+        {
+          "component": "Plant & Machinery (39 items)",
+          "category": "EQUIPMENT",
+          "amount": 2384000.0,
+          "notes": "Includes bucket elevator, separator, scourer, roller mill body, rolls, plansifter, purifier, motors (Rs 3.50L), panel (Rs 2.50L), erection material"
+        },
+        {
+          "component": "Furniture, Fixtures & Office Equipment",
+          "category": "FURNITURE_FIXTURE",
+          "amount": 70000.0,
+          "notes": "Office furniture lump sum"
+        },
+        {
+          "component": "Erection & Consultancy Charges",
+          "category": "SERVICES",
+          "amount": 45000.0,
+          "notes": "Technical erection and consultancy"
+        },
+        {
+          "component": "Pre-operative & Preliminary Expenses",
+          "category": "PRELIMINARY_EXPENSES",
+          "amount": 238000.0,
+          "notes": "Project identification, start-up, licensing, and trial expenses"
+        },
+        {
+          "component": "Margin for Working Capital",
+          "category": "WORKING_CAPITAL_MARGIN",
+          "amount": 556000.0,
+          "notes": "25% margin for bank working capital finance"
+        }
+      ],
+      "employment": {
+        "total_headcount": 12,
+        "monthly_wage_bill": 104500.0,
+        "annual_wage_bill": 1254000.0,
+        "roles": [
+          {"designation": "Skilled Workers", "count": 2, "salary_per_month": 10000.0, "total_monthly": 20000.0},
+          {"designation": "Semi-skilled Workers", "count": 4, "salary_per_month": 6000.0, "total_monthly": 24000.0},
+          {"designation": "Miller-cum-Chemist", "count": 1, "salary_per_month": 10000.0, "total_monthly": 10000.0},
+          {"designation": "Sales Supervisor", "count": 1, "salary_per_month": 12500.0, "total_monthly": 12500.0},
+          {"designation": "Store Keeper", "count": 1, "salary_per_month": 15000.0, "total_monthly": 15000.0},
+          {"designation": "Salesman", "count": 1, "salary_per_month": 12000.0, "total_monthly": 12000.0},
+          {"designation": "Accountant", "count": 1, "salary_per_month": 11000.0, "total_monthly": 11000.0},
+          {"designation": "Security Personnel", "count": 1, "salary_per_month": 7500.0, "total_monthly": 7500.0}
+        ]
+      },
+      "production_capacity": {
+        "installed_capacity_annual_mt": 2400.0,
+        "capacity_utilization_first_year_pct": 60.0,
+        "operating_turnover_annual_mt": 1440.0,
+        "capacity_growth_rate_annual_pct": 10.0
+      },
+      "financial_assumptions": {
+        "annual_turnover": 30585600.0,
+        "annual_cost_of_production": 26353000.0,
+        "annual_recurring_expenditure": 25193000.0,
+        "annual_depreciation": 370000.0,
+        "annual_finance_cost": 791000.0,
+        "annual_net_profit": 4233000.0,
+        "profit_margin_on_sales_pct": 13.84,
+        "interest_rate_pct": 12.0,
+        "power_rate_per_kwh": 7.0,
+        "plant_depreciation_rate_pct": 15.0,
+        "furniture_depreciation_rate_pct": 10.0,
+        "break_even_point": "DATA_NOT_AVAILABLE"
+      },
+      "turnover_product_mix": [
+        {"product": "Maida", "share_pct": 50.0, "quantity_mt": 720.0, "rate_per_mt": 23000.0, "annual_revenue": 16560000.0},
+        {"product": "Sooji", "share_pct": 12.0, "quantity_mt": 172.8, "rate_per_mt": 25000.0, "annual_revenue": 4320000.0},
+        {"product": "Atta", "share_pct": 20.0, "quantity_mt": 288.0, "rate_per_mt": 22000.0, "annual_revenue": 6336000.0},
+        {"product": "Chokar", "share_pct": 18.0, "quantity_mt": 259.2, "rate_per_mt": 13000.0, "annual_revenue": 3369600.0}
+      ],
+      "source_id": "SAMADHAN_FLOUR_MILL_PROJECT_PROFILE",
+      "source_pages": [4, 5, 6, 7, 8],
+      "primary_source_page": 5,
+      "text_header_cost_note": "Document text header on page 5 mentions 'Rs 115.35 lacs' due to template artifact, but itemized table and financing calculate exactly Rs 32.93 lacs.",
+      "verification_status": "VERIFIED"
+    }
+  ]
+}

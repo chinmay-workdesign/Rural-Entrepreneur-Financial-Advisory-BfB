@@ -160,6 +160,93 @@
       "source_page": 7,
       "section": "Para 4.1(vi)",
       "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_OWN_CONTRIBUTION_URBAN_SPECIAL",
+      "parameter": "OWN_CONTRIBUTION_MIN_PCT",
+      "area": "URBAN",
+      "category": "SPECIAL",
+      "value": 5.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "Beneficiary's contribution is set per category in the table and applies to both rural and urban areas",
+      "source_page": 4,
+      "section": "Para 3.2(i) Table",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_OWN_CONTRIBUTION_URBAN_GENERAL",
+      "parameter": "OWN_CONTRIBUTION_MIN_PCT",
+      "area": "URBAN",
+      "category": "GENERAL",
+      "value": 10.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "Beneficiary's contribution is set per category in the table and applies to both rural and urban areas",
+      "source_page": 4,
+      "section": "Para 3.2(i) Table",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_BANK_FINANCE_GENERAL",
+      "parameter": "BANK_FINANCE_PCT",
+      "category": "GENERAL",
+      "value": 90.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "The Bank will sanction 90% of the project cost in case of General Category of beneficiary",
+      "source_page": 9,
+      "section": "Para 8.1",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_BANK_FINANCE_SPECIAL",
+      "parameter": "BANK_FINANCE_PCT",
+      "category": "SPECIAL",
+      "value": 95.0,
+      "unit": "PERCENTAGE_OF_PROJECT_COST",
+      "conditions": "The Bank will sanction 95% of the project cost in case of Special Category of the beneficiary",
+      "source_page": 9,
+      "section": "Para 8.1",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_NO_INCOME_CEILING",
+      "parameter": "INCOME_CEILING",
+      "value": "NONE",
+      "conditions": "There will be no income ceiling for assistance for setting up projects under PMEGP",
+      "source_page": 5,
+      "section": "Para 4.1(ii)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_TRADING_ACTIVITY_RESTRICTION",
+      "parameter": "TRADING_ACTIVITY_ELIGIBILITY",
+      "value": "RESTRICTED",
+      "conditions": "Business/trading sales outlets only in NER, LWE-affected districts and A&N Islands; elsewhere only outlets selling KVI/PMEGP/SFURTI products or retail outlets backed by own manufacturing/service facilities",
+      "source_page": 6,
+      "section": "Para 4.1 Other eligibility conditions (iv)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_ANIMAL_HUSBANDRY_ALLOWED_LIST",
+      "parameter": "NEGATIVE_LIST_ANIMAL_HUSBANDRY",
+      "value": [
+        "DAIRY",
+        "POULTRY",
+        "AQUACULTURE",
+        "INSECTS"
+      ],
+      "conditions": "Animal husbandry is on the negative list, except Dairy (milk and dairy products), Poultry, Aquaculture and Insects (bees, sericulture); piggery only in NER",
+      "source_page": 28,
+      "section": "Para 30(iv)",
+      "verification_status": "VERIFIED"
+    },
+    {
+      "rule_id": "PMEGP_RURAL_AREA_DEFINITION",
+      "parameter": "RURAL_AREA_DEFINITION",
+      "value": "PANCHAYATI_RAJ_OR_REVENUE_VILLAGE",
+      "conditions": "Village as per revenue record, or any area under Panchayati Raj Institutions, is rural; areas under a Municipality are urban",
+      "source_page": 10,
+      "section": "Para 10",
+      "verification_status": "VERIFIED"
     }
   ]
 }
