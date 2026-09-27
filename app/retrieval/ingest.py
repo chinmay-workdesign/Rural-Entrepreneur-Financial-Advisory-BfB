@@ -23,7 +23,7 @@ class IngestionPipeline:
     """
     Deterministic document ingestion and vector indexing pipeline.
     """
-    def __init__(self, data_root: Optional[str] = None, qdrant_path: Optional[str] = None):
+    def __init__(self, data_root: Optional[str] = None, qdrant_path: Optional[str] = None, qdrant_url: Optional[str] = None):
         if data_root is None:
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             self.data_root = os.path.join(base_dir, "data")
@@ -34,6 +34,12 @@ class IngestionPipeline:
             self.qdrant_path = os.path.join(self.data_root, "qdrant_db")
         else:
             self.qdrant_path = qdrant_path
+
+        # Index into the same Qdrant the retrieval service reads from (Docker/server when QDRANT_URL is set)
+        if qdrant_url is None:
+            from app.config import settings
+            qdrant_url = settings.QDRANT_URL
+        self.qdrant_url = qdrant_url
 
         self.manifest_path = os.path.join(self.data_root, "manifests", "sources_manifest.json")
         self.embedding_model = TextEmbedding(model_name=EMBEDDING_MODEL_NAME)
@@ -616,7 +622,7 @@ class IngestionPipeline:
         with open(catalog_path, "w", encoding="utf-8") as f:
             json.dump({"total_chunks": len(chunks), "chunks": chunks}, f, indent=2)
 
-        client = QdrantClient(path=self.qdrant_path)
+        client = QdrantClient(url=self.qdrant_url) if self.qdrant_url else QdrantClient(path=self.qdrant_path)
 
         # Recreate collection
         if client.collection_exists(COLLECTION_NAME):

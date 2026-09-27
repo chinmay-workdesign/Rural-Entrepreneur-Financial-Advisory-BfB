@@ -66,24 +66,28 @@ class EvidenceRetrievalService:
     def verify_collection_ready(self, auto_build_if_empty: bool = False) -> bool:
         """
         Explicit deployment / startup check to ensure authoritative collection is ready.
+        A collection that exists but holds no points (e.g. metadata without storage) is not ready.
         Only builds the index if auto_build_if_empty is explicitly set to True (e.g. during deployment setup).
         """
         client = self._get_client()
         try:
             exists = client.collection_exists(COLLECTION_NAME)
-            if not exists:
-                if auto_build_if_empty:
-                    logger.info(f"Explicitly initializing collection '{COLLECTION_NAME}'...")
-                    from app.retrieval.ingest import IngestionPipeline
-                    pipeline = IngestionPipeline(data_root=self.data_root, qdrant_path=self.qdrant_path)
-                    pipeline.build_and_index()
-                    return True
-                else:
-                    logger.warning(f"Authoritative Qdrant collection '{COLLECTION_NAME}' is not yet indexed.")
-                    return False
-            return True
+            point_count = client.count(COLLECTION_NAME).count if exists else 0
         finally:
+            # Release the embedded-storage lock before the ingestion pipeline opens its own client
             client.close()
+
+        if point_count > 0:
+            return True
+
+        if not auto_build_if_empty:
+            logger.warning(f"Authoritative Qdrant collection '{COLLECTION_NAME}' is missing or empty (0 points).")
+            return False
+
+        logger.info(f"Explicitly initializing collection '{COLLECTION_NAME}'...")
+        from app.retrieval.ingest import IngestionPipeline
+        pipeline = IngestionPipeline(data_root=self.data_root, qdrant_path=self.qdrant_path, qdrant_url=self.qdrant_url)
+        return pipeline.build_and_index() > 0
 
     def retrieve_evidence(
         self,

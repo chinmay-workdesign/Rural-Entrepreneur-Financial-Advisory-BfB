@@ -1,4 +1,38 @@
 services:
+  # FastAPI app: Telegram + WhatsApp bot, SCA officer dashboard and API. http://localhost:8000
+  # Secrets come from .env; the settings below point the app at the other containers.
+  app:
+    build: .
+    image: rural-advisor-app:latest
+    container_name: rural_advisor_app
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - DATABASE_URL=sqlite:////app/storage/rural_advisor.db
+      - QDRANT_URL=http://qdrant:6333
+      - EVOLUTION_API_URL=http://evolution-api:8080
+      - BACKEND_INTERNAL_URL=http://localhost:8000
+      - ALLOW_PUBLIC_SIGNUP=false
+    volumes:
+      - app_storage:/app/storage
+      - app_dprs:/app/static/dprs
+    depends_on:
+      - qdrant
+      - evolution-api
+    restart: unless-stopped
+
+  # Public HTTPS URL for the app (Cloudflare quick tunnel, no account needed). Only the app is exposed.
+  # The URL is printed in: docker logs rural_advisor_tunnel  (it changes each time this container restarts)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: rural_advisor_tunnel
+    command: tunnel --no-autoupdate --url http://app:8000
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  # RAG vector store. The knowledge collection is built by the app on first start when empty.
   qdrant:
     image: qdrant/qdrant:latest
     container_name: rural_advisor_qdrant
@@ -6,7 +40,57 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - ./data/qdrant_db:/qdrant/storage
+      - qdrant_storage:/qdrant/storage
     environment:
       - QDRANT__SERVICE__GRPC_PORT=6334
     restart: unless-stopped
+
+  # WhatsApp gateway (Evolution API v2). API key comes from EVOLUTION_API_KEY in .env.
+  # Host port 8081 (8080 is often taken, e.g. by Oracle XE). The instance webhook points at
+  # http://app:8000/webhook/whatsapp so messages go straight to the app container.
+  evolution-api:
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: rural_advisor_evolution
+    ports:
+      - "8081:8080"
+    environment:
+      - SERVER_URL=http://localhost:8081
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:evolution@evolution-postgres:5432/evolution?schema=public
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_exchange
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=false
+      - DATABASE_SAVE_MESSAGE_UPDATE=false
+      - DATABASE_SAVE_DATA_CONTACTS=false
+      - DATABASE_SAVE_DATA_CHATS=false
+      - CACHE_REDIS_ENABLED=false
+      - CACHE_LOCAL_ENABLED=true
+      - DEL_INSTANCE=false
+      - LOG_LEVEL=ERROR,WARN,INFO
+    volumes:
+      - evolution_instances:/evolution/instances
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - evolution-postgres
+    restart: unless-stopped
+
+  evolution-postgres:
+    image: postgres:16-alpine
+    container_name: rural_advisor_evolution_db
+    environment:
+      - POSTGRES_USER=evolution
+      - POSTGRES_PASSWORD=evolution
+      - POSTGRES_DB=evolution
+    volumes:
+      - evolution_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  app_storage:
+  app_dprs:
+  qdrant_storage:
+  evolution_instances:
+  evolution_pgdata:
