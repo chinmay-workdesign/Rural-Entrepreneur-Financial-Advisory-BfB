@@ -2,6 +2,7 @@ import logging
 from fastapi import APIRouter, Request, Response, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 from app.db.session import get_db
+from app import bot_control
 
 logger = logging.getLogger("telegram_webhook")
 
@@ -25,6 +26,10 @@ async def handle_telegram_update(
 
     message = update.get("message") or update.get("edited_message")
     if not message:
+        return Response(content="OK", status_code=200)
+
+    # Bot stopped, or message sent while it was offline: not answered, not queued
+    if not bot_control.accept_message("telegram", message.get("date")):
         return Response(content="OK", status_code=200)
 
     chat = message.get("chat", {})

@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Any, Dict, Optional, List
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -15,7 +15,7 @@ from app.db.session import engine, Base, get_db, init_db
 from app.db import crud, models
 from app.whatsapp.webhook_handler import router as whatsapp_router
 from app.whatsapp.client import send_whatsapp_text, send_whatsapp_document
-from app.auth.routes import router as auth_router, get_optional_current_user, COOKIE_NAME
+from app.auth.routes import router as auth_router, get_current_user, get_optional_current_user, COOKIE_NAME
 from app.auth.security import decode_access_token
 
 # Logging configuration
@@ -36,13 +36,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Could not seed default users: {e}")
 
-    # Explicit startup check for authoritative Qdrant collection (Never rebuild on user request)
+    # Explicit startup check for authoritative Qdrant collection (built only at startup when missing/empty, never on user request)
     try:
         from app.retrieval.service import retrieval_service
-        if retrieval_service.verify_collection_ready(auto_build_if_empty=False):
+        if retrieval_service.verify_collection_ready(auto_build_if_empty=settings.QDRANT_AUTO_INGEST):
             logger.info("Authoritative Qdrant knowledge collection verified ready.")
         else:
-            logger.warning("Authoritative Qdrant collection not found. Execute 'py -m app.retrieval.ingest' to initialize.")
+            logger.warning("Authoritative Qdrant collection missing or empty. Execute 'py -m app.retrieval.ingest' to initialize.")
     except Exception as e:
         logger.warning(f"Could not verify Qdrant collection during startup: {e}")
 
@@ -53,10 +53,12 @@ async def lifespan(app: FastAPI):
         and os.environ.get("RUN_TELEGRAM_POLLING", "true").lower() == "true"
     )
     if should_run_bot:
-        from scripts.run_telegram_polling import poll_telegram_updates
-        logger.info("Starting integrated Telegram long-polling daemon thread...")
-        t = threading.Thread(target=poll_telegram_updates, daemon=True)
-        t.start()
+        from app import bot_control
+        if bot_control.is_enabled("telegram"):
+            logger.info("Starting integrated Telegram long-polling daemon thread...")
+            bot_control.start_telegram()
+        else:
+            logger.info("Telegram bot is switched off in the officer dashboard; not polling.")
     yield
     logger.info("Shutting down Rural Advisor API...")
 
@@ -104,26 +106,44 @@ def health_check():
         "environment": settings.ENVIRONMENT
     }
 
-@app.get("/login", response_class=HTMLResponse)
-def get_login_page(request: Request):
-    """Serves the secure Officer Authentication & Registration page."""
+def _session_user(request: Request, db: Session) -> Optional[models.User]:
+    """
+    The signed-in officer, or None. The account must still exist and be active: a cookie that is merely
+    well-signed (e.g. from before the database was reset) must not count, or /login and /admin redirect
+    to each other forever.
+    """
     token = request.cookies.get(COOKIE_NAME)
-    if token and decode_access_token(token):
+    payload = decode_access_token(token) if token else None
+    if not payload or "sub" not in payload:
+        return None
+    user = crud.get_user_by_id(db, payload["sub"])
+    return user if user and user.is_active else None
+
+
+def _without_stale_cookie(response, request: Request):
+    if request.cookies.get(COOKIE_NAME):
+        response.delete_cookie(key=COOKIE_NAME, path="/", httponly=True, samesite="lax")
+    return response
+
+
+@app.get("/login", response_class=HTMLResponse)
+def get_login_page(request: Request, db: Session = Depends(get_db)):
+    """Serves the secure Officer Authentication & Registration page."""
+    if _session_user(request, db):
         return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
 
     login_template = os.path.join(os.path.dirname(__file__), "templates", "login.html")
     if os.path.exists(login_template):
         with open(login_template, "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return _without_stale_cookie(HTMLResponse(content=f.read()), request)
     return HTMLResponse(content="<h2>SCA Portal login template loading...</h2>")
 
 @app.get("/", response_class=HTMLResponse)
 @app.get("/admin", response_class=HTMLResponse)
-def get_admin_dashboard(request: Request):
+def get_admin_dashboard(request: Request, db: Session = Depends(get_db)):
     """Serves the central SCA Field Officer & Admin Loan Appraisal Portal (Session Guarded)."""
-    token = request.cookies.get(COOKIE_NAME)
-    if not token or not decode_access_token(token):
-        return RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND)
+    if not _session_user(request, db):
+        return _without_stale_cookie(RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND), request)
 
     template_path = os.path.join(os.path.dirname(__file__), "templates", "admin.html")
     if os.path.exists(template_path):
@@ -137,51 +157,176 @@ def get_admin_dashboard(request: Request):
     """)
 
 
+def _reference_cost(trade: str, district: Optional[str], cost: float) -> Dict[str, Any]:
+    """Official unit cost for the activity (NABARD) or a labelled historical profile, and the variance."""
+    from app.finance.repository import benchmark_repository
+    bench = benchmark_repository.get_benchmark(trade, district=district or "")
+    if bench.get("status") == "DATA_NOT_AVAILABLE" or not bench.get("total_cost"):
+        return {"available": False}
+    ref = float(bench["total_cost"])
+    is_nabard = bench.get("source_id") == "NABARD_KA_UC_BOOKLET_2026_27"
+    return {
+        "available": True,
+        "is_official_unit_cost": is_nabard,
+        "unit": bench.get("sub_activity") or bench.get("activity"),
+        "reference_cost": ref,
+        "source": ("NABARD Karnataka Unit Cost Booklet 2026-27" if is_nabard
+                   else f"{bench.get('source_organization')} model project profile ({bench.get('publication_year')})"),
+        "source_page": bench.get("source_page"),
+        "historical_warning": bench.get("historical_warning"),
+    }
+
+
+@app.get("/admin/analytics", response_class=HTMLResponse)
+def get_analytics_page(request: Request, db: Session = Depends(get_db)):
+    """Statistics page for administrators: contacts, DPRs, decisions, overall and per district."""
+    user = _session_user(request, db)
+    if not user:
+        return _without_stale_cookie(RedirectResponse(url="/login", status_code=status.HTTP_302_FOUND), request)
+    if user.role != "ADMIN":
+        return RedirectResponse(url="/admin", status_code=status.HTTP_302_FOUND)
+    with open(os.path.join(os.path.dirname(__file__), "templates", "analytics.html"), "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
+
+@app.get("/internal/analytics")
+def get_analytics(
+    district: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Counts behind the analytics page, for all districts or one (`?district=Belagavi`). Admins only."""
+    if current_user.role != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Analytics are available to administrators only.")
+    from app import analytics
+    return analytics.compute(db, district=district)
+
+
+@app.get("/internal/analytics/export")
+def export_analytics(
+    district: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Excel workbook of the analytics (all districts or one) with the full applications and contacts lists."""
+    if current_user.role != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Analytics are available to administrators only.")
+    import re
+    from datetime import datetime
+    from fastapi.responses import Response as RawResponse
+    from app.analytics import IST
+    from app.analytics_export import build_workbook
+    scope = re.sub(r"[^A-Za-z0-9]+", "-", district.strip()).strip("-").lower() if district and district.strip() else "all-districts"
+    return RawResponse(
+        content=build_workbook(db, district=district),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="advisor-analytics-{scope}-{datetime.now(IST).date().isoformat()}.xlsx"'},
+    )
+
+
+@app.get("/internal/bots")
+def bot_status(current_user: models.User = Depends(get_current_user)):
+    """Whether the Telegram and WhatsApp bots are running (shown to every officer)."""
+    from app import bot_control
+    return {**bot_control.status(), "can_control": current_user.role == "ADMIN"}
+
+
+@app.post("/internal/bots/{channel}/{action}")
+def control_bot(channel: str, action: str, current_user: models.User = Depends(get_current_user)):
+    """Start or stop a bot. Admins only. A stopped bot ignores messages; they are not answered later."""
+    from app import bot_control
+    if current_user.role != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only an administrator can start or stop the bots.")
+    if channel not in bot_control.CHANNELS or action not in ("start", "stop"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown bot or action.")
+    who = current_user.email
+    if channel == "telegram":
+        if action == "start":
+            if not bot_control.start_telegram(changed_by=who):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="TELEGRAM_BOT_TOKEN is not configured.")
+        else:
+            bot_control.stop_telegram(changed_by=who)
+    else:
+        (bot_control.start_whatsapp if action == "start" else bot_control.stop_whatsapp)(changed_by=who)
+    return bot_control.status()
+
+
 @app.get("/internal/proposals")
 def list_proposals(
     status: Optional[str] = None,
     district: Optional[str] = None,
     scheme: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),  # officers only: contains applicants' personal data
 ):
-    """Retrieve proposals with beneficiary details and recommended schemes for SCA field dashboard."""
+    """
+    Applications for the SCA officer dashboard. Every value comes from the applicant's confirmed answers,
+    the verified scheme rules or officer actions; nothing is defaulted. Missing values are null.
+    """
     proposals = crud.get_proposals(db, status=status, district=district, scheme=scheme)
     results = []
     for p in proposals:
         b = p.beneficiary
-        ctx = (b.conversation_context or {}) if b else {}
-        multi = ctx.get("multi_schemes", {}) if isinstance(ctx, dict) else {}
+        snap = crud.get_proposal_snapshot(db, p.id)
+        if not snap and b and isinstance(b.conversation_context, dict):
+            # Applications made before snapshots existed: use the conversation only if it is about the same business
+            ctx = b.conversation_context
+            if ctx.get("trade") == p.business_trade:
+                ms = ctx.get("multi_schemes") or {}
+                snap = {"profile": ctx.get("profile"), "available_capital": ctx.get("available_capital"),
+                        "financial_structure": ctx.get("financial_structure"), "pmegp": ms.get("pmegp"),
+                        "mudra": ms.get("mudra")}
 
         # Normalize DPR PDF URL to relative path so it seamlessly opens in any browser/domain
         pdf_url = p.dpr_pdf_url
         if pdf_url and "/static/dprs/" in pdf_url:
-            filename = pdf_url.split("/static/dprs/")[-1]
-            pdf_url = f"/static/dprs/{filename}"
+            pdf_url = f"/static/dprs/{pdf_url.split('/static/dprs/')[-1]}"
 
+        profile = snap.get("profile") or {}
+        district_name = snap.get("district") or (b.district if b else None)
+        cost = float(p.project_cost)
         results.append({
             "id": p.id,
             "beneficiary_id": p.beneficiary_id,
-            "beneficiary_name": (b.full_name if b else None) or "Rural Entrepreneur",
+            # Shown exactly as stated by the applicant; missing values stay empty rather than defaulted
+            "beneficiary_name": profile.get("full_name") or (b.full_name if b else None),
             "whatsapp_number": b.whatsapp_number if b else "",
             "telegram_chat_id": b.telegram_chat_id if b else "",
             "primary_channel": (b.primary_channel if b else None) or "telegram",
-            "preferred_language": (b.preferred_language if b else None) or "kannada",
-            "district": (b.district if b else None) or "Belagavi",
-            "state": (b.state if b else None) or "Karnataka",
-            "annual_family_income": float(b.annual_family_income) if (b and b.annual_family_income) else None,
+            "preferred_language": snap.get("language") or (b.preferred_language if b else None),
+            "district": district_name,
+            "state": snap.get("state") or (b.state if b else None),
+            "applicant_profile": profile or None,
+            "available_capital": snap.get("available_capital"),
+            "annual_family_income": profile.get("annual_family_income") or (float(b.annual_family_income) if (b and b.annual_family_income) else None),
             "business_trade": p.business_trade,
             "scheme_tier": p.scheme_tier,
-            "project_cost": float(p.project_cost),
+            "project_cost": cost,
             "sanctioned_loan": float(p.sanctioned_loan),
             "beneficiary_margin": float(p.beneficiary_margin),
             "monthly_emi": float(p.monthly_emi),
-            "projected_dscr": float(p.projected_dscr),
+            "projected_dscr": float(p.projected_dscr) if p.projected_dscr is not None else None,
             "status": p.status,
             "dpr_pdf_url": pdf_url,
             "created_at": p.created_at.isoformat() if p.created_at else None,
-            "recommended_schemes": multi.get("schemes", []),
-            "capital_advice": multi.get("capital_advice", ""),
-            "primary_scheme_details": multi.get("primary", {}),
+            "details_confirmed_at": snap.get("details_confirmed_at"),
+            "dpr_generated_at": snap.get("dpr_generated_at"),
+            "corporation_loan": snap.get("financial_structure"),
+            "pmegp": snap.get("pmegp"),
+            "mudra": snap.get("mudra"),
+            "reference_cost": _reference_cost(p.business_trade, district_name, cost),
+            "verifications": [
+                {
+                    "field_officer_id": v.field_officer_id,
+                    "geo_latitude": float(v.geo_latitude) if v.geo_latitude is not None else None,
+                    "geo_longitude": float(v.geo_longitude) if v.geo_longitude is not None else None,
+                    "margin_money_verified": bool(v.margin_money_verified),
+                    "recommendation": v.recommendation,
+                    "verified_at": v.verified_at.isoformat() if v.verified_at else None,
+                }
+                for v in sorted(p.verifications, key=lambda v: v.verified_at or 0)
+            ],
+            "officer_log": snap.get("officer_log") or [],
         })
     return results
 
@@ -190,7 +335,7 @@ def sanction_proposal(
     proposal_id: str,
     payload: VerificationRequest,
     db: Session = Depends(get_db),
-    current_user: Optional[models.User] = Depends(get_optional_current_user)
+    current_user: models.User = Depends(get_current_user)  # only a logged-in officer can decide
 ):
     """
     SCA Field Officer approval endpoint:
@@ -217,6 +362,13 @@ def sanction_proposal(
     }
 
     crud.record_field_verification(db, verification_data)
+
+    # Keep the officer's remarks with the application (the verification table has no remarks column)
+    from datetime import datetime, timezone
+    log = list(crud.get_proposal_snapshot(db, proposal.id).get("officer_log") or [])
+    log.append({"officer": officer_id, "recommendation": payload.recommendation, "remarks": payload.remarks,
+                "margin_money_verified": payload.margin_money_verified, "at": datetime.now(timezone.utc).isoformat()})
+    crud.save_proposal_snapshot(db, proposal.id, {"officer_log": log})
 
     if payload.recommendation == "APPROVE":
         crud.update_proposal_status(db, proposal_id, "SANCTIONED")

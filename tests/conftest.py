@@ -1,0 +1,48 @@
+import os
+import tempfile
+
+# Tests get their own database file, set before any app module creates the engine, so test
+# applicants never appear in the real application database or the SCA officer portal.
+_TEST_DB = os.path.join(tempfile.gettempdir(), "rural_advisor_tests.db")
+if os.path.exists(_TEST_DB):
+    os.remove(_TEST_DB)
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
+
+import pytest
+from unittest.mock import patch
+from app.db.session import init_db
+
+@pytest.fixture(autouse=True)
+def offline_gemini(monkeypatch):
+    """Tests use the rule-based readers and templates: deterministic, and no Gemini quota is spent."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    # No real WhatsApp sends: with no Evolution / Meta credentials the WhatsApp client runs in mock mode
+    for key in ("EVOLUTION_API_URL", "EVOLUTION_API_KEY", "EVOLUTION_INSTANCE_NAME", "WHATSAPP_ACCESS_TOKEN", "PHONE_NUMBER_ID"):
+        monkeypatch.setattr(settings, key, "")
+
+
+@pytest.fixture(autouse=True)
+def offline_tts(monkeypatch):
+    """No network text-to-speech in tests; synthesize_speech falls back to its built-in test audio."""
+    import gtts
+
+    def _unavailable(*args, **kwargs):
+        raise RuntimeError("gTTS disabled in tests")
+
+    monkeypatch.setattr(gtts, "gTTS", _unavailable)
+
+
+@pytest.fixture(autouse=True)
+def setup_test_db():
+    init_db()
+    # Mock outbound network calls during automated test suite runs
+    with patch("app.telegram.client.send_telegram_text", return_value={"mock": True, "status": "sent"}), \
+         patch("app.telegram.client.send_telegram_document", return_value={"mock": True, "status": "sent"}), \
+         patch("app.telegram.client.send_telegram_voice", return_value={"mock": True, "status": "sent"}), \
+         patch("app.dialogue.conversation_state.send_telegram_text", return_value={"mock": True, "status": "sent"}), \
+         patch("app.dialogue.conversation_state.send_telegram_document", return_value={"mock": True, "status": "sent"}), \
+         patch("app.dialogue.conversation_state.send_channel_voice", return_value=None), \
+         patch("app.dialogue.conversation_state.upload_dpr_pdf", return_value="http://localhost:8000/static/dprs/sample.pdf"), \
+         patch("app.storage.local_storage.save_dpr_pdf", return_value="http://localhost:8000/static/dprs/sample.pdf"):
+        yield

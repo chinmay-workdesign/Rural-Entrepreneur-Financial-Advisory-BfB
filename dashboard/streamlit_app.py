@@ -273,7 +273,7 @@ else:
                     {"Metric": "SCA Agency Loan", "Amount": f"₹{float(p.sanctioned_loan):,.2f}", "Notes": "90% Capped"},
                     {"Metric": "Beneficiary Margin Money", "Amount": f"₹{float(p.beneficiary_margin):,.2f}", "Notes": f"{(float(p.beneficiary_margin)/float(p.project_cost))*100:.2f}% dynamic absorption"},
                     {"Metric": "Monthly EMI", "Amount": f"₹{float(p.monthly_emi):,.2f}", "Notes": "Reducing-balance annuity"},
-                    {"Metric": "Projected DSCR", "Amount": f"{float(p.projected_dscr):.2f}", "Notes": "Debt Service Coverage Ratio"}
+                    {"Metric": "Projected DSCR", "Amount": f"{float(p.projected_dscr):.2f}" if p.projected_dscr is not None else "Not available", "Notes": "Debt Service Coverage Ratio" if p.projected_dscr is not None else "No official benchmark for this trade"}
                 ])
                 st.table(f_df)
 
