@@ -18,6 +18,7 @@ from app.retrieval.router import (
 from app.finance.repository import benchmark_repository
 from app.finance.calculator import calculate_financial_structure
 from app.config import settings
+from tests.intake_helpers import complete_intake
 
 # ------------------------------------------------------------
 # TEST 1 — DAIRY
@@ -280,8 +281,10 @@ def test_e2e_conversational_context_preservation():
     assert b.conversation_context.get("district") == "Mysuru"
     db.close()
 
-    # Turn 4: Budget
+    # Turn 4: Budget, then the applicant's own details and confirmation
     process_telegram_query(chat_id, "My budget is ₹2,00,000", user_name="Ramesh")
+    complete_intake(lambda t: process_telegram_query(chat_id, t, user_name="Ramesh"),
+                    lambda db: crud.get_or_create_telegram_beneficiary(db, chat_id))
     db = SessionLocal()
     b = crud.get_or_create_telegram_beneficiary(db, chat_id)
     assert b.conversation_context.get("project_cost") == 200000.0
@@ -289,7 +292,8 @@ def test_e2e_conversational_context_preservation():
     fin = b.conversation_context.get("financial_structure")
     assert fin["loan"] == 180000.0
     assert fin["margin"] == 20000.0
-    assert abs(fin["emi"] - 2966.97) < 1.0
+    assert fin["instalment_frequency"] == "QUARTERLY"
+    assert abs(fin["quarterly_instalment"] - 8945.86) < 1.0
     db.close()
 
 # ------------------------------------------------------------
@@ -307,6 +311,8 @@ def test_e2e_context_switch_does_not_corrupt_state():
     # Set up active proposal
     process_telegram_query(chat_id, "1", user_name="Suresh")
     process_telegram_query(chat_id, "I want to start a dairy in Belagavi with ₹1,50,000", user_name="Suresh")
+    complete_intake(lambda t: process_telegram_query(chat_id, t, user_name="Suresh"),
+                    lambda db: crud.get_or_create_telegram_beneficiary(db, chat_id))
 
     db = SessionLocal()
     b = crud.get_or_create_telegram_beneficiary(db, chat_id)

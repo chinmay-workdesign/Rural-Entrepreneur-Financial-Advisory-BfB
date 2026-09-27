@@ -49,7 +49,13 @@ def test_voice_query_end_to_end():
     db = SessionLocal()
     try:
         beneficiary = crud.get_or_create_beneficiary(db, phone)
-        assert beneficiary.conversation_state in ["CONFIRM_DPR", "ADVISING"]
-        assert beneficiary.conversation_context.get("financial_structure") is not None
+        ctx = beneficiary.conversation_context
+        # The spoken trade, district and cost are captured; the applicant's own details are asked next
+        assert beneficiary.conversation_state == "COLLECTING"
+        assert "kirana" in ctx["trade"].lower()
+        assert ctx["district"] == "Belagavi"
+        assert ctx["project_cost"] == 120000.0
+        assert ctx["pending_field"] == "full_name"
+        assert ctx.get("financial_structure") is None
     finally:
         db.close()

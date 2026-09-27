@@ -68,7 +68,8 @@ def synthesize_speech(text: str, target_language: str = "kannada") -> Optional[b
         from gtts import gTTS
         lang_code = get_language_code(target_language)
         valid_lang = lang_code if lang_code in ["kn", "hi", "te", "ta", "mr", "bn", "gu", "en"] else "kn"
-        tts = gTTS(text=text, lang=valid_lang)
+        # Bounded wait: without a timeout an unresponsive TTS endpoint blocks the reply thread indefinitely
+        tts = gTTS(text=text, lang=valid_lang, timeout=15)
         buf = io.BytesIO()
         tts.write_to_fp(buf)
         audio_data = buf.getvalue()
