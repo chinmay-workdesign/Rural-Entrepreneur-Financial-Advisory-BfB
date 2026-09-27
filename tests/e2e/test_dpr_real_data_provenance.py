@@ -1,6 +1,7 @@
 import io
 import pytest
 import pypdf
+from app.finance.corporation_loans import compute_corporation_loan
 from app.dpr.generator import generate_dpr_pdf
 
 """
@@ -43,6 +44,7 @@ def test_e2e_dpr_dairy_provenance():
         "id": "prop_dairy_001",
         "business_trade": "Dairy Farming",
         "project_cost": 240000.0,
+        "financial_structure": compute_corporation_loan(240000.0, {"social_category": "sc"}),
         "sanctioned_loan": 216000.0,
         "beneficiary_margin": 24000.0,
         "monthly_emi": 3560.36,
@@ -69,16 +71,16 @@ def test_e2e_dpr_dairy_provenance():
     assert "Mahadevappa Biradar" in pdf_text
     assert "Belagavi" in pdf_text
     assert "Karnataka" in pdf_text
-    assert "240,000" in pdf_text
+    assert "2,40,000" in pdf_text
 
     # 2. Authoritative Benchmark Reference
     assert "NABARD" in pdf_text
     assert "2026" in pdf_text
 
     # 3. Financial calculations
-    assert "216,000" in pdf_text  # loan
+    assert "2,16,000" in pdf_text  # loan
     assert "24,000" in pdf_text   # margin
-    assert "3,560.36" in pdf_text # emi
+    assert "quarterly instalments" in pdf_text  # NSFDC repayment is quarterly
 
     # 4. Invariants: No synthetic markers
     assert "SYNTHETIC" not in pdf_text
@@ -92,6 +94,7 @@ def test_e2e_dpr_poultry_provenance():
         "id": "prop_poultry_001",
         "business_trade": "Poultry Farming",
         "project_cost": 456000.0,
+        "financial_structure": compute_corporation_loan(456000.0, {"social_category": "sc"}),
         "sanctioned_loan": 410400.0,
         "beneficiary_margin": 45600.0,
         "monthly_emi": 6764.68,
@@ -120,10 +123,10 @@ def test_e2e_dpr_poultry_provenance():
 
     # 2. Benchmark & Source
     assert "NABARD" in pdf_text
-    assert "456,000" in pdf_text
+    assert "4,56,000" in pdf_text
 
     # 3. Financial Structure
-    assert "410,400" in pdf_text
+    assert "4,10,400" in pdf_text
     assert "45,600" in pdf_text
 
     # 4. No synthetic values
@@ -144,6 +147,7 @@ def test_e2e_dpr_flour_mill_historical_provenance():
         "id": "prop_flour_001",
         "business_trade": "Flour Mill",
         "project_cost": 3293000.0,
+        "financial_structure": compute_corporation_loan(3293000.0, {"social_category": "sc"}),
         "sanctioned_loan": 2963700.0,
         "beneficiary_margin": 329300.0,
         "monthly_emi": 48873.35,
@@ -168,7 +172,7 @@ def test_e2e_dpr_flour_mill_historical_provenance():
 
     # 1. Applicant details
     assert "Anil Kulkarni" in pdf_text
-    assert "3,293,000" in pdf_text
+    assert "32,93,000" in pdf_text
 
     # 2. SAMADHAN source details
     assert "SAMADHAN" in pdf_text or "Project SAMADHAN" in pdf_text
