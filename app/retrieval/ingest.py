@@ -18,12 +18,13 @@ logger = logging.getLogger("retrieval_ingest")
 COLLECTION_NAME = "authoritative_knowledge"
 EMBEDDING_MODEL_NAME = "BAAI/bge-small-en-v1.5"
 VECTOR_DIMENSION = 384
+_DEFAULT_QDRANT_URL = object()
 
 class IngestionPipeline:
     """
     Deterministic document ingestion and vector indexing pipeline.
     """
-    def __init__(self, data_root: Optional[str] = None, qdrant_path: Optional[str] = None, qdrant_url: Optional[str] = None):
+    def __init__(self, data_root: Optional[str] = None, qdrant_path: Optional[str] = None, qdrant_url: Any = _DEFAULT_QDRANT_URL):
         if data_root is None:
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             self.data_root = os.path.join(base_dir, "data")
@@ -35,8 +36,7 @@ class IngestionPipeline:
         else:
             self.qdrant_path = qdrant_path
 
-        # Index into the same Qdrant the retrieval service reads from (Docker/server when QDRANT_URL is set)
-        if qdrant_url is None:
+        if qdrant_url is _DEFAULT_QDRANT_URL:
             from app.config import settings
             qdrant_url = settings.QDRANT_URL
         self.qdrant_url = qdrant_url

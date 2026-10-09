@@ -7,11 +7,12 @@
 [![WhatsApp](https://img.shields.io/badge/WhatsApp-Cloud%20API%20%2B%20Evolution-25D366.svg)](https://developers.facebook.com/docs/whatsapp/cloud-api)
 [![Docker](https://img.shields.io/badge/Deployment-Docker%20Compose-2496ED.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Test%20Suite-184%20Passed%20(100%25)-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Test%20Suite-194%20Passed%20(100%25)-brightgreen.svg)]()
+[![SerpApi](https://img.shields.io/badge/Live_Market-SerpApi-blueviolet.svg)](https://serpapi.com/)
 
 A production-ready, **100% zero-cost-tier** conversational AI advisory and financial structuring platform engineered to bridge the formal credit gap for hyper-local business owners and rural micro-entrepreneurs across India.
 
-The platform operates natively on **Telegram** and **WhatsApp** (supporting spoken voice notes and text in **Kannada, Hindi, Telugu, Marathi, and English**). It deterministically structures subsidized government credit schemes, validates financial feasibility against **official NABARD unit-cost benchmarks**, compiles bank-ready **Detailed Project Report (DPR)** PDFs with 5-year cash-flow and DSCR projections, and provides State Channelizing Agency (SCA) field officers with a real-time geo-verification and loan sanction console.
+The platform operates natively on **Telegram** and **WhatsApp** (supporting spoken voice notes and text in **Kannada, Hindi, Telugu, Marathi, and English**). It deterministically structures subsidized government credit schemes, validates financial feasibility against **official NABARD unit-cost benchmarks**, retrieves real-time commodity spot rates and micro-enterprise cost estimates via **SerpApi**, compiles bank-ready **Detailed Project Report (DPR)** PDFs with 5-year cash-flow and DSCR projections, and provides State Channelizing Agency (SCA) field officers with a real-time geo-verification and loan sanction console.
 
 ---
 
@@ -29,7 +30,8 @@ The platform operates under strict **`REAL_DATA_ONLY=True`** governance. Factual
 | **Statutory Corporation Schemes (NSFDC / NBCFDC / NSTFDC)** | **`IMPLEMENTED`** | Official Corporation Circulars & Patterns of Finance (2025/2026) | Direct demographic routing: Scheduled Castes → **NSFDC**, Backward Classes → **NBCFDC**, Scheduled Tribes → **NSTFDC** (including AMSY concessional loans for tribal women). |
 | **PMMY / MUDRA Borrower Tiers** | **`IMPLEMENTED`** | PIB Notification & Ministry of Finance Circular (29.10.2024) | Official notified categories: Shishu (up to ₹50K), Kishore (₹50K–₹5L), Tarun (₹5L–₹10L), and **Tarun Plus (up to ₹20L)**. Bank-determined borrower share and interest rates. |
 | **AIDIS Aggregate Credit Survey** | **`IMPLEMENTED`** | NSO NSS 77th Round Report No. 588 | Aggregate Karnataka & All-India credit statistics (Karnataka IOI 48.1%, National IOI 35.0%, 66.1% institutional debt share, AOD ₹59,748, DAR 3.8%). |
-| **Unbenchmarked Trades (Kirana, Tailoring, etc.)** | **`ENFORCED REFUSAL`** | Absence of official NABARD farm cost data | **Anti-Hallucination Guardrail:** The system refuses to invent DSCR or cash flows. Leaves DSCR empty (`"Not available"`), omits ungrounded 5-year projections, and appends an audit notice to the DPR. |
+| **Live Market Research & Mandi Spot Rates** | **`IMPLEMENTED`** | SerpApi Google Search Engine (`gl=in`, `location=Karnataka,India`) | Real-time commodity pricing (e.g., onion, tomato APMC spot rates, cotton/linen cloth rates per meter), unbenchmarked trade setup cost estimates (kirana, tailoring, saree shop outlay), 24-hr TTL caching to preserve monthly free-tier search credits, and grounded citations (`[Source (Web Source)]`). |
+| **Unbenchmarked Trades (Kirana, Tailoring, etc.)** | **`ENFORCED REFUSAL`** | Absence of official NABARD farm cost data | **Anti-Hallucination Guardrail:** The system refuses to invent DSCR or cash flows. Leaves DSCR empty (`"Not available"`), omits ungrounded 5-year projections, and appends an official audit notice to the DPR. |
 | **Vector DB & FastEmbed Local RAG Layer** | **`IMPLEMENTED`** | Local Qdrant + FastEmbed `BAAI/bge-small-en-v1.5` | 100% self-hosted vector retrieval with 20 structured authoritative chunks, automatic collection verification/auto-rebuild, and zero external SaaS API fees. |
 
 ---
@@ -48,9 +50,10 @@ The platform operates under strict **`REAL_DATA_ONLY=True`** governance. Factual
   - [3. Verified Social Category Scheme Routing](#3-verified-social-category-scheme-routing)
   - [4. Multilingual Script Isolation & Language Lock](#4-multilingual-script-isolation--language-lock)
   - [5. Zero-Cost Local Vector RAG Pipeline](#5-zero-cost-local-vector-rag-pipeline)
-  - [6. High-Availability Multi-Channel Delivery](#6-high-availability-multi-channel-delivery)
-  - [7. Dual-Engine Bank-Grade DPR PDF Generation](#7-dual-engine-bank-grade-dpr-pdf-generation)
-  - [8. SCA Field Officer Console & Admin Analytics](#8-sca-field-officer-console--admin-analytics)
+  - [6. Live Market Pricing & SerpApi Retrieval Layer](#6-live-market-pricing--serpapi-retrieval-layer)
+  - [7. High-Availability Multi-Channel Delivery](#7-high-availability-multi-channel-delivery)
+  - [8. Dual-Engine Bank-Grade DPR PDF Generation](#8-dual-engine-bank-grade-dpr-pdf-generation)
+  - [9. SCA Field Officer Console & Admin Analytics](#9-sca-field-officer-console--admin-analytics)
 - [Mathematical Formulations](#-mathematical-formulations)
   - [RBI Reducing-Balance Annuity EMI](#rbi-reducing-balance-annuity-emi)
   - [Debt Service Coverage Ratio (DSCR)](#debt-service-coverage-ratio-dscr)
@@ -60,7 +63,7 @@ The platform operates under strict **`REAL_DATA_ONLY=True`** governance. Factual
   - [1. Prerequisites](#1-prerequisites)
   - [2. Clone & Install Dependencies](#2-clone--install-dependencies)
   - [3. Environment Variables Configuration](#3-environment-variables-configuration)
-  - [4. Running Automated Tests (184 Tests)](#4-running-automated-tests-184-tests)
+  - [4. Running Automated Tests (194 Tests)](#4-running-automated-tests-194-tests)
   - [5. Launching the Field Officer Dashboard](#5-launching-the-field-officer-dashboard)
   - [6. Running the FastAPI Webhook & Polling Server](#6-running-the-fastapi-webhook--polling-server)
   - [7. Running via Docker Compose](#7-running-via-docker-compose)
@@ -204,17 +207,23 @@ Rather than offering a generic, ungrounded scheme to every applicant, the engine
 - **Self-Healing Index**: `app/retrieval/service.py` detects missing or empty vector collections on fresh clones and automatically executes ingestion (`QDRANT_AUTO_INGEST=true`).
 - **Cryptographic Provenance**: 20 authoritative policy chunks are registered with SHA-256 hashes in `data/manifests/sources_manifest.json`.
 
-### 6. High-Availability Multi-Channel Delivery
+### 6. Live Market Pricing & SerpApi Retrieval Layer
+- **Real-Time Spot Rates**: Queries SerpApi's Google Search Engine API with strict India geolocation (`gl="in"`, `location="Karnataka,India"`) to fetch current APMC mandi prices, agricultural commodity rates (onion, tomato, cotton), and retail material rates (e.g., linen or cotton cloth per meter).
+- **Quota Preservation & 24-Hour TTL Caching**: Free-tier search credits are strictly conserved using in-memory caching keyed by `(engine, location, query)` with a 24-hour TTL (`SERPAPI_CACHE_TTL_SECONDS=86400`). Repeat searches within the day consume zero external API credits.
+- **Compound Query Disambiguation**: In conversational scenarios where an applicant states their enterprise intent and asks a market price in one sentence (e.g., *"I want to open a saree shop in Kalburgi. Also tell me the price of 1 meter linen cloth"*), the engine cleanly extracts and isolates the focused inquiry clause for Google search, eliminating query stuffing and proxy timeouts while concurrently preserving onboarding details.
+- **Unbenchmarked Trade Outlay Enrichment**: When official NABARD SLUCC tables lack unit costs for non-farm trades (kirana, tailoring), the engine provides the statutory refusal notice while enriching the conversation with realistic, web-grounded micro-enterprise setup outlay estimates.
+
+### 7. High-Availability Multi-Channel Delivery
 - **Telegram Bot Daemon**: Uses long-polling with a local TCP socket mutex lock (`127.0.0.1:49153`) to prevent race conditions during daemon restarts.
 - **WhatsApp Cloud API & Evolution API**: Supports official Meta Cloud webhooks with HMAC-SHA256 signature validation and an Evolution API adapter.
 
-### 7. Dual-Engine Bank-Grade DPR PDF Generation
+### 8. Dual-Engine Bank-Grade DPR PDF Generation
 Implemented in `app/dpr/generator.py` using **ReportLab 4.1+**:
 - **Vector-Sharp 2-Page Layout**: Generates a standard loan application document containing applicant profile, project cost breakdown, means of finance, 5-year repayment schedule, and DSCR metrics.
 - **Zero Headless Browser Overhead**: Runs entirely in memory in under 50ms without headless Chromium or Puppeteer processes.
 - **Anti-Hallucination Stamp**: For unbenchmarked trades (kirana, tailoring), DSCR is printed as `"Not available"`, the ungrounded 5-year table is omitted, and an official audit notice is displayed.
 
-### 8. SCA Field Officer Console & Admin Analytics
+### 9. SCA Field Officer Console & Admin Analytics
 - **Streamlit Inspector Dashboard (`:8501`)**: Authenticated portal for field officers to review pending applications, verify margin money deposits, record GPS coordinates, and approve loan sanctions.
 - **FastAPI Admin Console (`:8000/admin`)**: Administrative console featuring bot start/stop toggles, system health monitors, and a multi-sheet Excel export engine (`/analytics/export/excel`) powered by `openpyxl`.
 
@@ -290,7 +299,8 @@ Rural Advisory/
 │   │   ├── context_builder.py       # RAG context assembler with source citations
 │   │   ├── ingest.py                # Local Qdrant FastEmbed ingestion pipeline
 │   │   ├── models.py                # Pydantic schemas for retrieved evidence & metadata
-│   │   ├── router.py                # Keyword & semantic retrieval router
+│   │   ├── router.py                # Keyword, semantic & live market query router
+│   │   ├── serpapi_client.py        # SerpApi client: APMC mandi rates, 24h cache & unindexed trade fallback
 │   │   └── service.py               # Qdrant client, auto-rebuild check & search guardrails
 │   ├── telegram/
 │   │   ├── bot_client.py            # Telegram Bot API client & PDF file delivery
@@ -323,7 +333,7 @@ Rural Advisory/
 │   ├── evaluate_retrieval.py        # 23-query RAG precision evaluation benchmark
 │   ├── generate_defense_dossier_pdf.py # ReportLab technical defense dossier PDF generator
 │   └── run_telegram_polling.py      # Standalone Telegram long-polling runner with singleton lock
-├── tests/                           # Complete automated test suite (184 tests, 100% passing)
+├── tests/                           # Complete automated test suite (194 tests, 100% passing)
 ├── docker-compose.yml               # Multi-container orchestration (FastAPI + Qdrant)
 ├── Dockerfile                       # Production container build specification
 ├── requirements.txt                 # Project Python dependencies
@@ -379,6 +389,11 @@ GEMINI_AUDIO_MODEL=gemini-3.5-flash-lite
 # Telegram Bot API Token (Optional, from @BotFather)
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 
+# SerpApi Real-Time Market Data Key (Optional for APMC mandi rates & web cost estimates)
+SERPAPI_API_KEY=your_serpapi_key_here
+SERPAPI_SEARCH_LOCATION=Karnataka,India
+SERPAPI_ENABLED=true
+
 # Real-Data Governance (Default: true)
 REAL_DATA_ONLY=true
 
@@ -386,7 +401,7 @@ REAL_DATA_ONLY=true
 DATABASE_URL=sqlite:///./rural_advisor.db
 ```
 
-### 4. Running Automated Tests (184 Tests)
+### 4. Running Automated Tests (194 Tests)
 
 Run the full automated test suite:
 
@@ -396,7 +411,7 @@ python -m pytest tests/ -v
 
 Expected result:
 ```text
-====================== 184 passed, 5 warnings in 15.94s =======================
+====================== 194 passed, 4 warnings in 20.40s =======================
 ```
 
 ### 5. Launching the Field Officer Dashboard
@@ -435,7 +450,7 @@ docker compose up -d --build
 
 ## 🧪 Automated Test Suite Coverage
 
-The platform maintains **184 automated tests** with 100% pass rate across 20 specialized test modules:
+The platform maintains **194 automated tests** with 100% pass rate across 21 specialized test modules:
 
 ```text
 tests/
@@ -459,12 +474,13 @@ tests/
 ├── test_intake_no_assumptions.py           (16 tests) - Grouped intake, Indic numerals, zero guesses
 ├── test_real_data_financial_engine.py      (16 tests) - PMEGP subsidy slabs & statutory loan shares
 ├── test_real_data_only_flow.py              (5 tests) - Enforced refusal on unbenchmarked trades
+├── test_serpapi_integration.py             (10 tests) - Live market intent routing, TTL cache, compound queries
 ├── test_telegram_channel.py                 (3 tests) - Telegram keyboard & chunked text handling
 ├── test_voice_pipeline.py                   (4 tests) - Gemini STT + Groq Whisper failover
 ├── test_webhook_parsing.py                  (4 tests) - WhatsApp Cloud API payload normalization
 └── test_whatsapp_evolution.py               (5 tests) - Evolution API message serialization
 ========================================================================================
-TOTAL: 184 Passed, 0 Failed (100% Coverage)
+TOTAL: 194 Passed, 0 Failed (100% Coverage)
 ```
 
 ---

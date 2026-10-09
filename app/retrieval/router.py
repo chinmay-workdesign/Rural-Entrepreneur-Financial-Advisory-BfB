@@ -15,6 +15,7 @@ from app.config import settings
 from app.retrieval.models import RetrievedEvidence
 from app.retrieval.service import retrieve_evidence, QdrantUnavailableError
 from app.retrieval.context_builder import build_grounded_llm_messages
+from app.retrieval.serpapi_client import serpapi_client
 from app.finance.calculator import calculate_financial_structure
 
 logger = logging.getLogger("retrieval_router")
@@ -25,6 +26,7 @@ class QueryIntent(str, Enum):
     MIXED = "MIXED"
     DATA_UNAVAILABLE = "DATA_UNAVAILABLE"
     GENERAL_CONVERSATION = "GENERAL_CONVERSATION"
+    LIVE_MARKET = "LIVE_MARKET"
 
 def classify_query_intent(text: str) -> Tuple[QueryIntent, Dict[str, Any]]:
     """
@@ -95,13 +97,29 @@ def classify_query_intent(text: str) -> Tuple[QueryIntent, Dict[str, Any]]:
         "ಪ್ರಾರಂಭಿಸಲು ಬಯಸುತ್ತೇನೆ", "ಶುರು ಮಾಡಲು", "शुरू करना चाहता", "सुरू करायचे", "ప్రారంభించాలనుకుంటున్నాను"
     ]
     is_proposal_statement = any(p in lower for p in proposal_starters)
-    is_question = any(q in lower for q in [
+    market_terms = [
+        "mandi price", "mandi rate", "market price", "current price", "spot price",
+        "today's price", "todays price", "current market rate", "live price",
+        "feed price", "fertilizer price", "price of 1", "cost of 1", "rate of 1",
+        "per kg", "per meter", "per quintal", "per litre", "per liter",
+        "cloth price", "cotton cloth", "fabric cost",
+        "ಮಂಡಿ ಬೆಲೆ", "ಮಾರುಕಟ್ಟೆ ಬೆಲೆ", "ಇಂದಿನ ಬೆಲೆ",
+        "मंडी भाव", "बाजार भाव", "आज का भाव",
+        "మండీ ధర", "మార్కెಟ್ ధర", "ఈరోజు ధర",
+        "बाजार भाव", "आजचा भाव", "मंडी दर"
+    ]
+    has_market_term = any(m in lower for m in market_terms)
+
+    question_terms = [
         "what", "how", "why", "when", "which", "where", "can i", "is there", "?",
-        "ಏನು", "ಎಷ್ಟು", "ಹೇಗೆ", "ಯಾವ",
-        "क्या", "कितना", "कैसे", "कौन",
-        "ఏమిటి", "ఎంత", "ఎలా", "ఏది",
-        "काय", "किती", "कसे", "कोणते"
-    ])
+        "tell me", "tell us", "let me know", "give me", "find out", "check price",
+        "cost of", "price of", "rate of", "how much",
+        "ಏನು", "ಎಷ್ಟು", "ಹೇಗೆ", "ಯಾವ", "ತಿಳಿಸಿ", "ಹೇಳಿ", "ಬೆಲೆ", "ದರ",
+        "क्या", "कितना", "कैसे", "कौन", "बताएं", "बताओ", "दाम", "दर", "भाव",
+        "ఏమిటి", "ఎంత", "ఎలా", "ఏది", "చెప్పండి", "ధర",
+        "काय", "किती", "कसे", "कोणते", "सांगा"
+    ]
+    is_question = any(q in lower for q in question_terms)
 
     # 4. Pure FINANCIAL (Priority when explicit "calculate emi", "what is my emi", or "calculate loan" for user amount without asking benchmark cost):
     if (has_fin_calc and has_amount and not any(k in lower for k in ["nabard", "samadhan", "what will it cost", "what does it cost", "how much will it cost"])) and not ("nabard" in lower or "samadhan" in lower):
@@ -111,15 +129,19 @@ def classify_query_intent(text: str) -> Tuple[QueryIntent, Dict[str, Any]]:
     if (has_factual_term and has_fin_calc) or (has_factual_term and has_amount and any(k in lower for k in ["emi", "calculate", "borrow", "take"])):
         return QueryIntent.MIXED, {"has_amount": True, "factual_indicator": True}
 
-    # If it is purely a proposal statement without a question, route to dialogue proposal flow
-    if is_proposal_statement and not is_question:
+    # 6. LIVE_MARKET: Mandi price, daily spot rates, current commodity market prices (High priority)
+    if has_market_term:
+        return QueryIntent.LIVE_MARKET, {"market_query": True}
+
+    # If it is purely a proposal statement without a question or market inquiry, route to dialogue proposal flow
+    if is_proposal_statement and not is_question and not has_market_term:
         return QueryIntent.GENERAL_CONVERSATION, {"reason": "proposal_progression"}
 
-    # 6. Pure FINANCIAL: Asks to calculate loan / EMI / outlay
+    # 7. Pure FINANCIAL: Asks to calculate loan / EMI / outlay
     if has_fin_calc or (has_amount and any(k in lower for k in ["loan", "emi", "margin", "subsidy for my"])):
         return QueryIntent.FINANCIAL, {"has_amount": True}
 
-    # 7. Pure FACTUAL: Asks about benchmarks, policies, surveys, or trade questions
+    # 8. Pure FACTUAL: Asks about benchmarks, policies, surveys, or trade questions
     trade_terms = ["dairy", "cow", "cows", "poultry", "broiler", "sheep", "goat", "piggery", "fisheries", "beekeeping", "sericulture"]
     has_trade_term = any(t in lower for t in trade_terms)
     if has_factual_term or (is_question and has_trade_term) or any(k in lower for k in ["what is the cost", "how much does", "guidelines", "percentage", "survey"]):
@@ -165,12 +187,14 @@ def execute_authoritative_routing(
     language: str = "kannada",
     project_cost: Optional[float] = None,
     loan_amount: Optional[float] = None,
-    request_id: Optional[str] = None
+    request_id: Optional[str] = None,
+    allow_web_fallback: bool = True
 ) -> Dict[str, Any]:
     """
     Executes intent-based routing:
     - FACTUAL: Retrieves verified chunks, injects into grounded prompt, synthesizes response.
-    - DATA_UNAVAILABLE: Returns explicit gap notice without hallucination.
+    - DATA_UNAVAILABLE: Returns explicit gap notice without hallucination, optionally enriched with SerpApi live market data.
+    - LIVE_MARKET: Real-time APMC mandi and spot market prices via SerpApi.
     - MIXED: Performs both authoritative retrieval and deterministic calculation.
     - FINANCIAL: Executes deterministic Python math.
     Returns response payload with dynamic citations, provenance metadata, and latency metrics.
@@ -234,6 +258,46 @@ def execute_authoritative_routing(
                     f"Evaluation for this activity is customized strictly to your submitted project quotation. "
                     f"No synthetic or unverified benchmarks are substituted."
                 )
+
+            # Enrich with SerpApi web market research if configured
+            if allow_web_fallback and serpapi_client.is_configured():
+                try:
+                    web_evidence = serpapi_client.search_as_evidence(
+                        query=f"setup cost estimate for {trade} shop micro enterprise in India",
+                        max_results=2
+                    )
+                    if web_evidence:
+                        evidence_list = web_evidence
+                        citations = [e.to_citation_string() for e in web_evidence]
+                        source_ids = [e.source_id for e in web_evidence]
+                        source_pages = [e.source_page for e in web_evidence]
+                        verification_status = "LIVE_WEB_SEARCH"
+                        retrieval_used = True
+                        retrieval_count = len(web_evidence)
+
+                        web_messages = build_grounded_llm_messages(
+                            user_query=query,
+                            evidence_list=web_evidence,
+                            financial_result=None,
+                            language=language
+                        )
+                        try:
+                            from app.ai.llm_client import call_llm_chat
+                            llm_resp = call_llm_chat(messages=web_messages, temperature=0.2)
+                            web_narrative = llm_resp if llm_resp and llm_resp.strip() else _generate_factual_fallback_answer(web_evidence, language)
+                        except Exception:
+                            web_narrative = _generate_factual_fallback_answer(web_evidence, language)
+
+                        if web_narrative and web_narrative.strip():
+                            if language == "kannada":
+                                header = "\n\n🌐 ಲೈವ್ ಮಾರುಕಟ್ಟೆ ಅಂದಾಜು (SerpApi):\n"
+                            elif language == "hindi":
+                                header = "\n\n🌐 लाइव बाजार अनुसंधान (SerpApi):\n"
+                            else:
+                                header = "\n\n🌐 Live Market Research Estimates (SerpApi):\n"
+                            answer += header + web_narrative
+                except Exception as e:
+                    logger.warning(f"SerpApi fallback query failed for trade {trade}: {e}")
         else: # PMMY borrower rules
             if language == "kannada":
                 answer = (
@@ -252,17 +316,17 @@ def execute_authoritative_routing(
 
         total_latency_ms = round((time.perf_counter() - start_total) * 1000, 2)
         _log_observability(
-            req_id=req_id, intent=intent.value, retrieval_used=False, retrieval_count=0,
-            source_ids=[], source_pages=[], verification_status="DATA_NOT_AVAILABLE",
-            financial_engine_used=False, llm_used=False, language=language,
+            req_id=req_id, intent=intent.value, retrieval_used=retrieval_used, retrieval_count=retrieval_count,
+            source_ids=source_ids, source_pages=source_pages, verification_status=verification_status if verification_status != "NONE" else "DATA_NOT_AVAILABLE",
+            financial_engine_used=False, llm_used=llm_used, language=language,
             retrieval_ms=0, financial_ms=0, llm_ms=0, total_ms=total_latency_ms
         )
         return {
             "request_id": req_id,
             "intent": intent.value,
             "answer": answer,
-            "citations": [],
-            "evidence": [],
+            "citations": citations,
+            "evidence": [e.model_dump() for e in evidence_list],
             "financial_result": None,
             "latencies": {"total_ms": total_latency_ms}
         }
@@ -290,6 +354,27 @@ def execute_authoritative_routing(
         retrieval_latency_ms = round((time.perf_counter() - t_ret_start) * 1000, 2)
         retrieval_used = True
         retrieval_count = len(evidence_list)
+
+        # If Qdrant's top result is below authoritative threshold (< 0.68),
+        # local documents do not genuinely match this query. Clear evidence_list to trigger SerpApi.
+        if evidence_list and evidence_list[0].relevance_score < 0.68:
+            logger.info(
+                f"Top Qdrant score {evidence_list[0].relevance_score:.3f} is below 0.68. "
+                f"Discarding local chunks to allow SerpApi web fallback."
+            )
+            evidence_list = []
+
+        if not evidence_list:
+            # Check SerpApi web fallback if local RAG has 0 results
+            if allow_web_fallback and serpapi_client.is_configured():
+                logger.info(f"Local RAG returned 0 results for '{query}'. Attempting SerpApi web fallback...")
+                web_evidence = serpapi_client.search_as_evidence(
+                    query=query,
+                    max_results=3
+                )
+                if web_evidence:
+                    evidence_list = web_evidence
+                    retrieval_count = len(evidence_list)
 
         if not evidence_list:
             # Absence of evidence remains absence of evidence
@@ -335,6 +420,119 @@ def execute_authoritative_routing(
             if "2020" not in answer:
                 hist_warning = "\n\n⚠️ [ಗಮನಿಸಿ: ಈ ವೆಚ್ಚವು 2020 ರ ಪ್ರಾಜೆಕ್ಟ್ ಸಮಾಧಾನ (MDTC) ಮಾದರಿ ಯೋಜನಾ ಪ್ರೊಫೈಲ್‌ನ ಐತಿಹಾಸಿಕ ಮಾನದಂಡವಾಗಿದೆ. ಪ್ರಸ್ತುತ ಮಾರುಕಟ್ಟೆ ವೆಚ್ಚವು ಇಂದಿನ ದರಗಳ ಮೇಲೆ ಅವಲಂಬಿತವಾಗಿರುತ್ತದೆ.]" if language == "kannada" else "\n\n⚠️ [Note: Stated machinery costs reflect the 2020 Project SAMADHAN model project profile benchmark. Current market costs require up-to-date vendor quotations.]"
                 answer += hist_warning
+
+        total_latency_ms = round((time.perf_counter() - start_total) * 1000, 2)
+        _log_observability(
+            req_id=req_id, intent=intent.value, retrieval_used=retrieval_used, retrieval_count=retrieval_count,
+            source_ids=source_ids, source_pages=source_pages, verification_status=verification_status,
+            financial_engine_used=False, llm_used=llm_used, language=language,
+            retrieval_ms=retrieval_latency_ms, financial_ms=0, llm_ms=llm_latency_ms, total_ms=total_latency_ms
+        )
+        return {
+            "request_id": req_id,
+            "intent": intent.value,
+            "answer": answer,
+            "citations": citations,
+            "evidence": [e.model_dump() for e in evidence_list],
+            "financial_result": None,
+            "retrieval_used": True,
+            "financial_engine_used": False,
+            "latencies": {
+                "retrieval_ms": retrieval_latency_ms,
+                "llm_ms": llm_latency_ms,
+                "total_ms": total_latency_ms
+            }
+        }
+
+    # -------------------------------------------------------------
+    # CASE 2B: LIVE_MARKET QUERY (SerpApi Mandi & Spot Rates)
+    # -------------------------------------------------------------
+    if intent == QueryIntent.LIVE_MARKET:
+        t_ret_start = time.perf_counter()
+        if not (allow_web_fallback and serpapi_client.is_configured()):
+            answer = "Live mandi and market search is currently not enabled or configured (SerpApi key required)."
+            if language == "kannada":
+                answer = "ಲೈವ್ ಮಂಡಿ ಮತ್ತು ಮಾರುಕಟ್ಟೆ ಬೆಲೆ ಶೋಧನೆ ಸದ್ಯಕ್ಕೆ ಸಕ್ರಿಯವಾಗಿಲ್ಲ (SerpApi ಕೀ ಸಂರಚಿಸಿಲ್ಲ)."
+            elif language == "hindi":
+                answer = "लाइव मंडी और बाजार मूल्य खोज वर्तमान में सक्षम नहीं है (SerpApi कुंजी आवश्यक है)।"
+            return {
+                "request_id": req_id,
+                "intent": intent.value,
+                "answer": answer,
+                "citations": [],
+                "evidence": [],
+                "financial_result": None,
+                "retrieval_used": False,
+                "financial_engine_used": False,
+                "latencies": {"total_ms": round((time.perf_counter() - start_total) * 1000, 2)}
+            }
+
+        # For compound queries, extract the focused market inquiry sentence for SerpApi
+        search_query = query
+        parts = re.split(r"[.?!;\n]+", query)
+        market_parts = [p.strip() for p in parts if any(m in p.lower() for m in [
+            "mandi", "price", "rate", "cost", "spot", "today", "live", "feed", "fertilizer",
+            "per kg", "per meter", "per quintal", "per litre", "cloth", "cotton", "fabric",
+            "ಬೆಲೆ", "ದರ", "ಭಾವ", "भाव", "दर", "ధర"
+        ])]
+        if market_parts:
+            target_part = market_parts[-1]
+            target_cleaned = re.sub(r"^(?:also\s+|please\s+|and\s+|can you\s+)?(?:tell me|give me|find out|check|what is|how much is)\s+", "", target_part, flags=re.IGNORECASE).strip()
+            target_cleaned = re.sub(r"\b(?:in my area|in my village|in village|near me|in my town)\b", "", target_cleaned, flags=re.IGNORECASE).strip()
+            target_cleaned = " ".join(target_cleaned.split())
+            if not any(loc in target_cleaned.lower() for loc in ["karnataka", "india", "belagavi", "gadag", "kolar", "mysuru", "bangalore", "bengaluru", "uttar kannada", "uttara kannada"]):
+                for dist in ["uttar kannada", "uttara kannada", "belagavi", "gadag", "kolar", "mysuru", "dharwad", "tumakuru"]:
+                    if dist in query.lower():
+                        target_cleaned += f" in {dist.title()}"
+                        break
+                else:
+                    target_cleaned += " in Karnataka"
+            if len(target_cleaned) > 5:
+                search_query = target_cleaned
+
+        evidence_list = serpapi_client.search_as_evidence(
+            query=search_query,
+            max_results=3
+        )
+        retrieval_latency_ms = round((time.perf_counter() - t_ret_start) * 1000, 2)
+        retrieval_used = bool(evidence_list)
+        retrieval_count = len(evidence_list)
+
+        if not evidence_list:
+            answer = "Could not find current market rates for this item via live web search."
+            if language == "kannada":
+                answer = "ಈ ವಸ್ತುವಿಗೆ ಸಂಬಂಧಿಸಿದ ಪ್ರಸ್ತುತ ಮಾರುಕಟ್ಟೆ ಬೆಲೆಗಳು ವೆಬ್ ಶೋಧನೆಯಲ್ಲಿ ಲಭ್ಯವಾಗಿಲ್ಲ."
+            return {
+                "request_id": req_id,
+                "intent": intent.value,
+                "answer": answer,
+                "citations": [],
+                "evidence": [],
+                "financial_result": None,
+                "latencies": {"total_ms": round((time.perf_counter() - start_total) * 1000, 2)}
+            }
+
+        source_ids = [e.source_id for e in evidence_list]
+        source_pages = [e.source_page for e in evidence_list]
+        verification_status = "LIVE_WEB_SEARCH"
+        citations = [e.to_citation_string() for e in evidence_list]
+
+        messages = build_grounded_llm_messages(
+            user_query=query,
+            evidence_list=evidence_list,
+            financial_result=None,
+            language=language
+        )
+        t_llm_start = time.perf_counter()
+        try:
+            from app.ai.llm_client import call_llm_chat
+            llm_response = call_llm_chat(messages=messages, temperature=0.2)
+            llm_latency_ms = round((time.perf_counter() - t_llm_start) * 1000, 2)
+            llm_used = True
+            answer = llm_response if llm_response and llm_response.strip() else _generate_factual_fallback_answer(evidence_list, language)
+        except Exception as e:
+            logger.warning(f"LLM call failed for live market: {e}")
+            answer = _generate_factual_fallback_answer(evidence_list, language)
 
         total_latency_ms = round((time.perf_counter() - start_total) * 1000, 2)
         _log_observability(

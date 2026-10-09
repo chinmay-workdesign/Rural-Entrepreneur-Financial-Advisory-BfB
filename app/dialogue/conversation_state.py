@@ -529,6 +529,17 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
         if detected_lang:
             beneficiary.conversation_state = "COLLECTING"
             db.commit()
+
+            # Check if this inquiry is a factual, live market, or unindexed trade question first
+            from app.retrieval.router import classify_query_intent, execute_authoritative_routing, QueryIntent
+            rag_intent, _ = classify_query_intent(text_clean)
+            if rag_intent in [QueryIntent.FACTUAL, QueryIntent.MIXED, QueryIntent.DATA_UNAVAILABLE, QueryIntent.LIVE_MARKET]:
+                routing_res = execute_authoritative_routing(text_clean, language=detected_lang)
+                send_channel_text(beneficiary, routing_res["answer"])
+                if from_voice:
+                    _send_voice_audio_reply(beneficiary, routing_res["answer"], detected_lang)
+                return
+
             _handle_intake_turn(db, beneficiary, text_clean, context, from_voice=from_voice)
             return
 
@@ -727,18 +738,50 @@ def _handle_user_turn(db, beneficiary, user_text: str, from_voice: bool = False)
     # 4. While collecting details, treat the message as an answer first
     if state == "CONFIRM_PROFILE":
         _handle_profile_confirmation(db, beneficiary, text_clean, context, from_voice=from_voice)
+    # 5. Phase 5: Local Authoritative RAG & Live Market Intent Routing
+    # Prioritize market questions, gap inquiries, and direct questions over intake detail extraction
+    from app.retrieval.router import classify_query_intent, execute_authoritative_routing, QueryIntent
+    rag_intent, _ = classify_query_intent(text_clean)
+    if rag_intent in [QueryIntent.LIVE_MARKET, QueryIntent.DATA_UNAVAILABLE] or (_looks_like_question(text_clean) and rag_intent in [QueryIntent.FACTUAL, QueryIntent.MIXED]):
+        # If user provided intake answers in this message (compound message), extract and preserve them
+        if state in ("GREETING", "COLLECTING", "ADVISING"):
+            pending = context.get("pending_fields") or ([context["pending_field"]] if context.get("pending_field") else [])
+            asked = pending or list(intake.GROUPS[0][1])
+            answers = intake.extract_answers(text_clean, pending)
+            if answers:
+                updated, _ = intake.apply_answers(context, answers, asked=asked)
+                if updated:
+                    context["profile_confirmed"] = False
+                    for stale in ("financial_structure", "cashflows", "multi_schemes", "nabard_benchmark"):
+                        context.pop(stale, None)
+                    _save_context(db, beneficiary, context)
+
+        routing_res = execute_authoritative_routing(text_clean, language=lang)
+        reply = routing_res["answer"]
+
+        # If onboarding is in progress and fields are still pending, append the continuation prompt
+        if state in ("GREETING", "COLLECTING"):
+            nxt = intake.next_prompt(context, lang)
+            if nxt:
+                msg, fields = nxt
+                context["pending_fields"] = fields
+                context["pending_field"] = fields[0]
+                beneficiary.conversation_state = "COLLECTING"
+                _save_context(db, beneficiary, context)
+                reply = f"{reply}\n\n---\n{msg}"
+
+        send_channel_text(beneficiary, reply)
+        if from_voice:
+            _send_voice_audio_reply(beneficiary, reply, lang)
         return
+
     # Statements such as "dairy in Belagavi, cost 2 lakh" are details, not factual questions; only a message
     # that looks like a question (with no question pending) goes straight to the factual router.
     if state in ("COLLECTING", "GREETING") and (context.get("pending_field") or not _looks_like_question(text_clean)):
         if _handle_intake_turn(db, beneficiary, text_clean, context, from_voice=from_voice, allow_passthrough=True):
             return
 
-    # 5. Phase 5: Local Authoritative RAG Intent Routing
-    # Check for Factual, Mixed, or Data-Unavailable inquiries before proposal accumulation
-    from app.retrieval.router import classify_query_intent, execute_authoritative_routing, QueryIntent
-    rag_intent, _ = classify_query_intent(text_clean)
-    if rag_intent in [QueryIntent.FACTUAL, QueryIntent.MIXED, QueryIntent.DATA_UNAVAILABLE]:
+    if rag_intent in [QueryIntent.FACTUAL, QueryIntent.MIXED, QueryIntent.DATA_UNAVAILABLE, QueryIntent.LIVE_MARKET]:
         routing_res = execute_authoritative_routing(text_clean, language=lang)
         send_channel_text(beneficiary, routing_res["answer"])
         if from_voice:
@@ -866,8 +909,13 @@ def _send(beneficiary, text: str, lang: str, from_voice: bool, speak_all: bool =
 def _looks_like_question(text: str) -> bool:
     lower = text.lower()
     return "?" in text or any(w in lower for w in (
-        "what", "how", "which", "why", "ಏನು", "ಹೇಗೆ", "ಯಾವ", "ಏಕೆ", "क्या", "कैसे", "कौन", "क्यों",
-        "ఏమి", "ఎలా", "ఏ ", "ఎందుకు", "काय", "कसे", "कोणत", "का ",
+        "what", "how", "which", "why", "when", "where", "can i", "is there",
+        "tell me", "tell us", "let me know", "give me", "find out", "check price",
+        "cost of", "price of", "rate of", "how much",
+        "ಏನು", "ಎಷ್ಟು", "ಹೇಗೆ", "ಯಾವ", "ಏಕೆ", "ತಿಳಿಸಿ", "ಹೇಳಿ", "ಬೆಲೆ", "ದರ",
+        "क्या", "कैसे", "कौन", "क्यों", "बताएं", "बताओ", "दाम", "दर", "भाव",
+        "ఏమి", "ఎలా", "ఏ ", "ఎందుకు", "చెప్పండి", "ధర",
+        "काय", "कसे", "कोणत", "का ", "सांगा", "दर", "भाव"
     ))
 
 

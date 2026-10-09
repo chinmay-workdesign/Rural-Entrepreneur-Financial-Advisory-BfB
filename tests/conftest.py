@@ -17,6 +17,9 @@ def offline_gemini(monkeypatch):
     """Tests use the rule-based readers and templates: deterministic, and no Gemini quota is spent."""
     from app.config import settings
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(settings, "SERPAPI_API_KEY", "")
+    monkeypatch.setattr(settings, "SERPAPI_ENABLED", False)
+    monkeypatch.setattr(settings, "ALLOW_PUBLIC_SIGNUP", True)
     # No real WhatsApp sends: with no Evolution / Meta credentials the WhatsApp client runs in mock mode
     for key in ("EVOLUTION_API_URL", "EVOLUTION_API_KEY", "EVOLUTION_INSTANCE_NAME", "WHATSAPP_ACCESS_TOKEN", "PHONE_NUMBER_ID"):
         monkeypatch.setattr(settings, key, "")

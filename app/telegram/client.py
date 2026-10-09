@@ -65,18 +65,24 @@ def _send_single_telegram_chunk(
     if reply_markup:
         payload["reply_markup"] = reply_markup
 
-    try:
-        response = requests.post(url, json=payload, timeout=12)
-        # If markdown formatting failed, retry without markdown
-        if response.status_code == 400 and parse_mode:
-            payload.pop("parse_mode")
-            response = requests.post(url, json=payload, timeout=12)
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(url, json=payload, timeout=15)
+            # If markdown formatting failed, retry without markdown
+            if response.status_code == 400 and parse_mode:
+                payload.pop("parse_mode", None)
+                response = requests.post(url, json=payload, timeout=15)
 
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as e:
-        logger.error(f"Failed to send Telegram chunk to {chat_id}: {e}")
-        return {"error": str(e), "success": False}
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            if attempt < max_retries - 1:
+                import time
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            logger.error(f"Failed to send Telegram chunk to {chat_id}: {e}")
+            return {"error": str(e), "success": False}
 
 def send_telegram_text(
     chat_id: Union[str, int],

@@ -22,6 +22,9 @@ def _empty_collection_workspace(tmp_path):
     (data_root / "manifests").mkdir(parents=True)
     (data_root / "processed").mkdir()
     shutil.copy(os.path.join(REPO_DATA, "manifests", "sources_manifest.json"), data_root / "manifests")
+    chunks_src = os.path.join(REPO_DATA, "processed", "retrieval_chunks.json")
+    if os.path.exists(chunks_src):
+        shutil.copy(chunks_src, data_root / "processed")
 
     qdrant_path = str(data_root / "qdrant_db")
     client = QdrantClient(path=qdrant_path)

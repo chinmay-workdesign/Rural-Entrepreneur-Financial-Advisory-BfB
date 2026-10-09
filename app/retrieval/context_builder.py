@@ -17,6 +17,7 @@ CRITICAL INVARIANTS:
 5. DATA GAPS (TAILORING / KIRANA): If the user asks about Tailoring or Kirana benchmarks, state clearly that authoritative government/NABARD unit cost data is currently DATA_NOT_AVAILABLE in the official repository, and the evaluation is based on the applicant's customized outlay.
 6. AIDIS MACRO CONTEXT ONLY: Survey statistics from AIDIS (such as rural indebtedness or informal interest rates) are macro-economic context and MUST NEVER be used to dictate an individual borrower's loan size or interest rate.
 7. LANGUAGE & TONE: Be supportive, simple, and encouraging for rural entrepreneurs. Answer in the applicant's requested language.
+8. LIVE WEB EVIDENCE: If evidence items have verification status LIVE_WEB_SEARCH, explain that these findings come from live web data and provide realistic market indications, but remind the applicant to obtain physical vendor quotations.
 """
 
 def build_grounded_llm_messages(
@@ -34,7 +35,9 @@ def build_grounded_llm_messages(
         for idx, ev in enumerate(evidence_list, 1):
             citation = ev.to_citation_string()
             status_warning = ""
-            if ev.verification_status != "VERIFIED_OFFICIAL":
+            if ev.verification_status == "LIVE_WEB_SEARCH":
+                status_warning = " [STATUS: LIVE_WEB_SEARCH - REAL-TIME WEB DATA, ADVISE PHYSICAL VENDOR VERIFICATION]"
+            elif ev.verification_status != "VERIFIED_OFFICIAL":
                 status_warning = f" [STATUS: {ev.verification_status} - USE CAUTION, UNVERIFIED FOR END-BORROWERS]"
             
             nature_note = ""

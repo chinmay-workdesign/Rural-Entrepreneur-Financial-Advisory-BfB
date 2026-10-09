@@ -44,4 +44,6 @@ class RetrievedEvidence(BaseModel):
             return f"[RBI PSL Master Directions 2025, p.{self.source_page}]"
         elif "PMMY" in self.source_id:
             return f"[MUDRA Partner Guidelines (Unverified for end-borrowers), p.{self.source_page}]"
+        elif "SERPAPI" in self.source_id or self.source_type == "SERPAPI_WEB_SEARCH":
+            return f"[{self.source_title} (Web Source)]"
         return f"[{self.source_title}, p.{self.source_page}]"

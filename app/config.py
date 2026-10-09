@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     # True: never fall back to synthetic benchmarks; unsupported trades return DATA_NOT_AVAILABLE.
     REAL_DATA_ONLY: bool = True
 
+    # SerpApi Live Web Search & Market Grounding
+    SERPAPI_API_KEY: str = ""
+    SERPAPI_SEARCH_LOCATION: str = "Karnataka, India"
+    SERPAPI_ENABLED: bool = True
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
